@@ -926,6 +926,96 @@ include "includes/header.php";
     [data-theme="dark"] .qr-code-expiry {
         color: var(--warning-400);
     }
+    
+    /* PIX Copy-Paste Code Styles */
+    .pix-code-section {
+        margin: 1.5rem 0;
+        padding: 1rem;
+        background: var(--bg-secondary);
+        border-radius: var(--border-radius);
+        border: 1px solid var(--border-color);
+    }
+    
+    .pix-code-label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+    
+    .pix-code-container {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .pix-code-input {
+        flex: 1;
+        padding: 0.75rem;
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-sm);
+        font-family: monospace;
+        font-size: 0.75rem;
+        color: var(--text-primary);
+        word-break: break-all;
+        resize: none;
+    }
+    
+    .pix-code-input:focus {
+        outline: none;
+        border-color: var(--primary-500);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .copy-pix-btn {
+        background: var(--success-500);
+        color: white;
+        border: none;
+        padding: 0.75rem 1rem;
+        border-radius: var(--border-radius-sm);
+        cursor: pointer;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+    
+    .copy-pix-btn:hover {
+        background: var(--success-600);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+    }
+    
+    .copy-pix-btn:active {
+        transform: translateY(0);
+    }
+    
+    .copy-pix-btn.copied {
+        background: var(--primary-500);
+    }
+    
+    .pix-code-help {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+    
+    /* Dark theme adjustments for PIX code */
+    [data-theme="dark"] .pix-code-section {
+        background: var(--bg-tertiary);
+    }
+    
+    [data-theme="dark"] .pix-code-input {
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+    }
 </style>
 
 <script>
