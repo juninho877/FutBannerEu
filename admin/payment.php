@@ -926,96 +926,6 @@ include "includes/header.php";
     [data-theme="dark"] .qr-code-expiry {
         color: var(--warning-400);
     }
-    
-    /* PIX Copy-Paste Code Styles */
-    .pix-code-section {
-        margin: 1.5rem 0;
-        padding: 1rem;
-        background: var(--bg-secondary);
-        border-radius: var(--border-radius);
-        border: 1px solid var(--border-color);
-    }
-    
-    .pix-code-label {
-        display: block;
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: var(--text-primary);
-        margin-bottom: 0.5rem;
-    }
-    
-    .pix-code-container {
-        display: flex;
-        gap: 0.5rem;
-        margin-bottom: 0.75rem;
-    }
-    
-    .pix-code-input {
-        flex: 1;
-        padding: 0.75rem;
-        background: var(--bg-primary);
-        border: 1px solid var(--border-color);
-        border-radius: var(--border-radius-sm);
-        font-family: monospace;
-        font-size: 0.75rem;
-        color: var(--text-primary);
-        word-break: break-all;
-        resize: none;
-    }
-    
-    .pix-code-input:focus {
-        outline: none;
-        border-color: var(--primary-500);
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    }
-    
-    .copy-pix-btn {
-        background: var(--success-500);
-        color: white;
-        border: none;
-        padding: 0.75rem 1rem;
-        border-radius: var(--border-radius-sm);
-        cursor: pointer;
-        transition: var(--transition);
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-weight: 500;
-        white-space: nowrap;
-    }
-    
-    .copy-pix-btn:hover {
-        background: var(--success-600);
-        transform: translateY(-1px);
-        box-shadow: var(--shadow-md);
-    }
-    
-    .copy-pix-btn:active {
-        transform: translateY(0);
-    }
-    
-    .copy-pix-btn.copied {
-        background: var(--primary-500);
-    }
-    
-    .pix-code-help {
-        font-size: 0.75rem;
-        color: var(--text-muted);
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        margin-top: 0.5rem;
-    }
-    
-    /* Dark theme adjustments for PIX code */
-    [data-theme="dark"] .pix-code-section {
-        background: var(--bg-tertiary);
-    }
-    
-    [data-theme="dark"] .pix-code-input {
-        background: var(--bg-secondary);
-        color: var(--text-primary);
-    }
 </style>
 
 <script>
@@ -1259,6 +1169,114 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('beforeunload', function() {
         clearInterval(checkPaymentInterval);
     });
+    
+    // PIX Copy functionality
+    const copyPixBtn = document.getElementById('copyPixBtn');
+    const pixCodeInput = document.getElementById('pixCode');
+    
+    if (copyPixBtn && pixCodeInput) {
+        copyPixBtn.addEventListener('click', function() {
+            const pixCode = pixCodeInput.value;
+            
+            if (!pixCode) {
+                Swal.fire({
+                    title: 'Erro',
+                    text: 'Código PIX não disponível',
+                    icon: 'error',
+                    timer: 2000,
+                    showConfirmButton: false,
+                    background: document.body.getAttribute('data-theme') === 'dark' ? '#1e293b' : '#ffffff',
+                    color: document.body.getAttribute('data-theme') === 'dark' ? '#f1f5f9' : '#1e293b'
+                });
+                return;
+            }
+            
+            // Try modern clipboard API first
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(pixCode).then(() => {
+                    showCopySuccess();
+                }).catch(() => {
+                    fallbackCopy(pixCode);
+                });
+            } else {
+                fallbackCopy(pixCode);
+            }
+        });
+        
+        // Allow clicking on input to select all text
+        pixCodeInput.addEventListener('click', function() {
+            this.select();
+        });
+    }
+    
+    function fallbackCopy(text) {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                showCopySuccess();
+            } else {
+                showCopyError();
+            }
+        } catch (err) {
+            showCopyError();
+        } finally {
+            document.body.removeChild(textArea);
+        }
+    }
+    
+    function showCopySuccess() {
+        const copyBtn = document.getElementById('copyPixBtn');
+        const originalText = copyBtn.innerHTML;
+        
+        // Update button appearance
+        copyBtn.classList.add('copied');
+        copyBtn.innerHTML = '<i class="fas fa-check"></i> Copiado!';
+        
+        // Show success notification
+        Swal.fire({
+            title: 'Código Copiado!',
+            text: 'Cole no seu app bancário para pagar via PIX',
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false,
+            background: document.body.getAttribute('data-theme') === 'dark' ? '#1e293b' : '#ffffff',
+            color: document.body.getAttribute('data-theme') === 'dark' ? '#f1f5f9' : '#1e293b'
+        });
+        
+        // Reset button after 3 seconds
+        setTimeout(() => {
+            copyBtn.classList.remove('copied');
+            copyBtn.innerHTML = originalText;
+        }, 3000);
+    }
+    
+    function showCopyError() {
+        Swal.fire({
+            title: 'Erro ao Copiar',
+            text: 'Não foi possível copiar automaticamente. Selecione e copie manualmente.',
+            icon: 'error',
+            confirmButtonText: 'OK',
+            background: document.body.getAttribute('data-theme') === 'dark' ? '#1e293b' : '#ffffff',
+            color: document.body.getAttribute('data-theme') === 'dark' ? '#f1f5f9' : '#1e293b'
+        });
+        
+        // Select the text for manual copying
+        const pixCodeInput = document.getElementById('pixCode');
+        if (pixCodeInput) {
+            pixCodeInput.focus();
+            pixCodeInput.select();
+        }
+    }
     <?php endif; ?>
     
     // Log form submission for debugging

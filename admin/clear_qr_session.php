@@ -3,6 +3,7 @@ session_start();
 
 // Limpar dados de pagamento da sessão
 unset($_SESSION['payment_qr_code']);
+unset($_SESSION['payment_pix_code']);
 unset($_SESSION['payment_created_at']);
 unset($_SESSION['payment_id']);
 unset($_SESSION['payment_months']);
