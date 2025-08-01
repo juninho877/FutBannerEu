@@ -57,10 +57,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 $loginSuccess = isset($_SESSION['login_success']) && $_SESSION['login_success'];
 $loginMessage = isset($_SESSION['login_message']) ? $_SESSION['login_message'] : '';
 
+// Verificar se existe uma mensagem de sucesso de cadastro
+$registrationSuccess = isset($_SESSION['registration_success']) && $_SESSION['registration_success'];
+$registrationMessage = isset($_SESSION['registration_message']) ? $_SESSION['registration_message'] : '';
+
 // Limpar mensagens da sessão após uso
 if (isset($_SESSION['login_success'])) {
     unset($_SESSION['login_success']);
     unset($_SESSION['login_message']);
+}
+
+if (isset($_SESSION['registration_success'])) {
+    unset($_SESSION['registration_success']);
+    unset($_SESSION['registration_message']);
 }
 ?>
 <!DOCTYPE html>
@@ -401,6 +410,28 @@ if (isset($_SESSION['login_success'])) {
             color: var(--text-secondary);
             font-size: 0.875rem;
         }
+        
+        .register-link {
+            text-align: center;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .register-link p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+        
+        .register-link a {
+            color: var(--primary-500);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .register-link a:hover {
+            text-decoration: underline;
+        }
 
         /* Animations */
         @keyframes slideIn {
@@ -499,6 +530,13 @@ if (isset($_SESSION['login_success'])) {
             </div>
             <?php endif; ?>
             
+            <?php if ($registrationSuccess): ?>
+            <div class="success-message">
+                <i class="fas fa-user-plus"></i>
+                <?php echo $registrationMessage; ?>
+            </div>
+            <?php endif; ?>
+            
             <div class="welcome-text">
                 <h3>Bem-vindo de volta!</h3>
                 <p>Faça login para acessar o painel administrativo</p>
@@ -539,6 +577,10 @@ if (isset($_SESSION['login_success'])) {
                         <?php echo $erro; ?>
                     </div>
                 <?php endif; ?>
+                
+                <div class="register-link">
+                    <p>Não tem uma conta? <a href="register.php">Cadastre-se aqui</a></p>
+                </div>
             </form>
             </div>
     </div>

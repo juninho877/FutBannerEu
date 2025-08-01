@@ -803,6 +803,10 @@ if ($isTempUser) {
                         <i class="fas fa-users"></i>
                         <span>Meus Usuários</span>
                     </a>
+                    <a href="generate_referral_links.php" class="nav-item">
+                        <i class="fas fa-link"></i>
+                        <span>Links de Referência</span>
+                    </a>
                     <a href="buy_credits.php" class="nav-item">
                         <i class="fas fa-coins"></i>
                         <span>Comprar Créditos</span>
