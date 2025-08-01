@@ -127,6 +127,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         
         if ($result['success']) {
             $_SESSION['payment_qr_code'] = $result['qr_code'];
+            $_SESSION['payment_pix_code'] = $result['pix_code'];
+            $_SESSION['payment_pix_code'] = $result['pix_code'];
             $_SESSION['payment_id'] = $result['payment_id'];
             $_SESSION['payment_created_at'] = time();
             $_SESSION['payment_months'] = $months;
@@ -141,6 +143,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     } elseif ($_POST['action'] === 'cancel_payment') {
         // Limpar dados do pagamento
         unset($_SESSION['payment_qr_code']);
+        unset($_SESSION['payment_pix_code']);
         unset($_SESSION['payment_created_at']);
         unset($_SESSION['payment_id']);
         unset($_SESSION['payment_months']);
@@ -295,6 +298,30 @@ include "includes/header.php";
                             Assinatura por <?php echo $_SESSION['payment_months'] ?? 1; ?> 
                             <?php echo ($_SESSION['payment_months'] ?? 1) > 1 ? 'meses' : 'mês'; ?>
                         </p>
+                        
+                        <!-- PIX Copy-Paste Code Section -->
+                        <?php if (!empty($_SESSION['payment_pix_code'])): ?>
+                        <div class="pix-code-section">
+                            <label class="pix-code-label">
+                                <i class="fas fa-copy"></i>
+                                Código PIX (Copia e Cola):
+                            </label>
+                            <div class="pix-code-container">
+                                <input type="text" id="pixCode" class="pix-code-input" 
+                                       value="<?php echo htmlspecialchars($_SESSION['payment_pix_code']); ?>" 
+                                       readonly>
+                                <button type="button" id="copyPixBtn" class="copy-pix-btn">
+                                    <i class="fas fa-copy"></i>
+                                    Copiar
+                                </button>
+                            </div>
+                            <p class="pix-code-help">
+                                <i class="fas fa-info-circle"></i>
+                                Cole este código no seu app bancário para pagar via PIX
+                            </p>
+                        </div>
+                        <?php endif; ?>
+                        
                         <p class="qr-code-expiry">
                             <i class="fas fa-clock"></i>
                             QR Code válido por 30 minutos
@@ -741,6 +768,103 @@ include "includes/header.php";
         display: flex;
         align-items: center;
         gap: 0.5rem;
+    }
+    
+    .pix-code-section {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+    
+    .pix-code-label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.75rem;
+    }
+    
+    .pix-code-container {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .pix-code-input {
+        flex: 1;
+        padding: 0.75rem;
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-sm);
+        font-family: monospace;
+        font-size: 0.75rem;
+        color: var(--text-primary);
+        word-break: break-all;
+        cursor: pointer;
+        transition: var(--transition);
+    }
+    
+    .pix-code-input:focus {
+        outline: none;
+        border-color: var(--primary-500);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .pix-code-input:hover {
+        border-color: var(--primary-300);
+    }
+    
+    .copy-pix-btn {
+        background: var(--success-500);
+        color: white;
+        border: none;
+        padding: 0.75rem 1rem;
+        border-radius: var(--border-radius-sm);
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        white-space: nowrap;
+    }
+    
+    .copy-pix-btn:hover {
+        background: var(--success-600);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+    }
+    
+    .copy-pix-btn:active {
+        transform: translateY(0);
+    }
+    
+    .copy-pix-btn.copied {
+        background: var(--primary-500);
+        animation: pulse 0.5s ease-in-out;
+    }
+    
+    .pix-code-help {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0;
+    }
+    
+    @keyframes pulse {
+        0%, 100% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.05);
+        }
     }
     
     .qr-code-actions {
