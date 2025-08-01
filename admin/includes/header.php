@@ -971,6 +971,11 @@ if ($isTempUser) {
         color: var(--danger-400);
     }
     
+    [data-theme="dark"] .trial-badge {
+        background: rgba(59, 130, 246, 0.1);
+        color: var(--info-400);
+    }
+    
     [data-theme="dark"] .account-expired-notice {
         background: rgba(239, 68, 68, 0.1);
         color: var(--danger-400);

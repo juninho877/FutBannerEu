@@ -147,6 +147,7 @@ include "includes/header.php";
                             </label>
                             <select id="status" name="status" class="form-input form-select" required>
                                 <option value="active" <?php echo ($_POST['status'] ?? 'active') === 'active' ? 'selected' : ''; ?>>Ativo</option>
+                                <option value="trial" <?php echo ($_POST['status'] ?? '') === 'trial' ? 'selected' : ''; ?>>Em Teste</option>
                                 <option value="inactive" <?php echo ($_POST['status'] ?? '') === 'inactive' ? 'selected' : ''; ?>>Inativo</option>
                             </select>
                         </div>

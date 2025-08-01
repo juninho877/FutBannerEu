@@ -449,6 +449,11 @@ include "includes/header.php";
         background: rgba(239, 68, 68, 0.1);
         color: var(--danger-400);
     }
+    
+    [data-theme="dark"] .status-trial {
+        background: rgba(59, 130, 246, 0.1);
+        color: var(--info-400);
+    }
 
     [data-theme="dark"] .text-warning-600 {
         color: var(--warning-400);
