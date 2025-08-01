@@ -1,4 +1,4 @@
-<?php
+<?php 
 /**
  * 🧪 Sistema de Teste Completo do Sistema de Referência
  * 
