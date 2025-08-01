@@ -281,6 +281,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border: 2px solid rgba(255, 255, 255, 0.2);
             animation: pulse 2s infinite;
         }
+        
+        .register-logo-img {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+            border-radius: 50%;
+        }
 
         .register-title {
             font-size: 1.75rem;
@@ -683,7 +690,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </button>
             
             <div class="logo">
-                <i class="fas fa-futbol"></i>
+                <?php
+                $customLogoUrl = $systemSettings->getSystemLogoUrl();
+                if ($customLogoUrl): ?>
+                    <img src="<?php echo htmlspecialchars($customLogoUrl); ?>" alt="FutBanner" class="register-logo-img">
+                <?php else: ?>
+                    <i class="fas fa-futbol"></i>
+                <?php endif; ?>
+                    require_once 'classes/SystemSettings.php';
+                    $systemSettings = new SystemSettings();
+                    echo htmlspecialchars($systemSettings->getSetting('system_icon', 'fas fa-futbol'));
+                ?>"></i>
             </div>
             <h1 class="register-title">Criar Conta</h1>
             <p class="register-subtitle">Junte-se ao FutBanner e comece a criar banners incríveis</p>

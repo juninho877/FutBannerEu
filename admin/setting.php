@@ -104,6 +104,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && $currentUserData) {
                 $mensagem = "Erro ao verificar senha: " . $e->getMessage();
                 $tipoMensagem = "error";
             }
+        } elseif (isset($_POST['action']) && $_POST['action'] === 'upload_logo') {
+            if (isset($_FILES['system_logo']) && $_FILES['system_logo']['error'] === 0) {
+                $result = $systemSettings->saveSystemLogo($_FILES['system_logo']);
+                $mensagem = $result['message'];
+                $tipoMensagem = $result['success'] ? 'success' : 'error';
+            } else {
+                $mensagem = "Nenhum arquivo foi enviado ou ocorreu um erro no upload.";
+                $tipoMensagem = "error";
+            }
+        } elseif (isset($_POST['action']) && $_POST['action'] === 'restore_logo') {
+            $result = $systemSettings->restoreDefaultSystemLogo();
+            $mensagem = $result['message'];
+            $tipoMensagem = $result['success'] ? 'success' : 'error';
         }
     }
 }
@@ -226,30 +239,40 @@ include "includes/header.php";
             </div>
         </div>
         
-        <!-- System Icon Settings -->
+        <!-- System Logo Settings -->
         <div class="card">
             <div class="card-header">
                 <h3 class="card-title">
-                    <i class="fas fa-icons text-primary-500 mr-2"></i>
-                    Ícone do Sistema
+                    <i class="fas fa-image text-primary-500 mr-2"></i>
+                    Logo do Sistema
                 </h3>
-                <p class="card-subtitle">Personalize o ícone que aparece no sistema</p>
+                <p class="card-subtitle">Personalize o logo que aparece no sistema</p>
             </div>
             <div class="card-body">
-                <!-- Preview do Ícone Atual -->
-                <div class="icon-preview-section mb-6">
-                    <label class="form-label">Ícone Atual:</label>
-                    <div class="icon-preview">
-                        <div class="icon-display">
-                            <i class="<?php echo htmlspecialchars($systemSettings->getSetting('system_icon', 'fas fa-futbol')); ?> text-4xl text-primary-500"></i>
+                <!-- Preview do Logo Atual -->
+                <div class="logo-preview-section mb-6">
+                    <label class="form-label">Logo Atual:</label>
+                    <div class="logo-preview">
+                        <div class="logo-display">
+                            <?php 
+                            $customLogoUrl = $systemSettings->getSystemLogoUrl();
+                            if ($customLogoUrl): ?>
+                                <img src="<?php echo htmlspecialchars($customLogoUrl); ?>" alt="Logo do Sistema" class="system-logo-preview">
+                            <?php else: ?>
+                                <i class="fas fa-futbol text-4xl text-primary-500"></i>
+                            <?php endif; ?>
                         </div>
-                        <div class="icon-info">
+                        <div class="logo-info">
                             <p class="text-sm text-muted">
-                                Classe atual: <code><?php echo htmlspecialchars($systemSettings->getSetting('system_icon', 'fas fa-futbol')); ?></code>
                                 <?php 
-                                $iconUpdatedAt = $systemSettings->getSetting('system_icon_updated_at');
-                                if ($iconUpdatedAt) {
-                                    echo '<br><span class="text-xs">Atualizado em: ' . date('d/m/Y H:i', strtotime($iconUpdatedAt)) . '</span>';
+                                if ($customLogoUrl) {
+                                    echo 'Logo personalizado';
+                                    $logoUpdatedAt = $systemSettings->getSetting('system_logo_updated_at');
+                                    if ($logoUpdatedAt) {
+                                        echo '<br><span class="text-xs">Atualizado em: ' . date('d/m/Y H:i', strtotime($logoUpdatedAt)) . '</span>';
+                                    }
+                                } else {
+                                    echo 'Logo padrão (ícone Font Awesome)';
                                 }
                                 ?>
                             </p>
@@ -257,115 +280,72 @@ include "includes/header.php";
                     </div>
                 </div>
                 
-                <!-- Icon Selection Form -->
-                <form method="POST" id="iconForm">
-                    <input type="hidden" name="action" value="update_icon">
+                <!-- Logo Upload Form -->
+                <form method="POST" enctype="multipart/form-data" id="logoForm">
+                    <input type="hidden" name="action" value="upload_logo">
                     
                     <div class="form-group">
-                        <label for="system_icon" class="form-label">
-                            <i class="fas fa-code mr-2"></i>
-                            Classe do Ícone (Font Awesome)
+                        <label for="system_logo" class="form-label">
+                            <i class="fas fa-upload mr-2"></i>
+                            Novo Logo do Sistema
                         </label>
-                        <input type="text" id="system_icon" name="system_icon" class="form-input" 
-                               value="<?php echo htmlspecialchars($systemSettings->getSetting('system_icon', 'fas fa-futbol')); ?>" 
-                               placeholder="fas fa-futbol">
+                        <input type="file" id="system_logo" name="system_logo" class="form-input" 
+                               accept=".png,.jpg,.jpeg,.gif,.webp,image/png,image/jpeg,image/jpg,image/gif,image/webp">
                         <p class="text-xs text-muted mt-1">
-                            Use classes do Font Awesome 6. Exemplos: fas fa-futbol, fas fa-star, fas fa-crown, etc.
+                            Formatos aceitos: PNG, JPG, GIF, WebP | Tamanho recomendado: 64x64px ou 128x128px | Máximo: 2MB
                         </p>
-                    </div>
-                    
-                    <!-- Icon Suggestions -->
-                    <div class="icon-suggestions mb-4">
-                        <label class="form-label">Sugestões Populares:</label>
-                        <div class="icon-grid">
-                            <button type="button" class="icon-suggestion" data-icon="fas fa-futbol" title="Futebol">
-                                <i class="fas fa-futbol"></i>
-                                <span>Futebol</span>
-                            </button>
-                            <button type="button" class="icon-suggestion" data-icon="fas fa-star" title="Estrela">
-                                <i class="fas fa-star"></i>
-                                <span>Estrela</span>
-                            </button>
-                            <button type="button" class="icon-suggestion" data-icon="fas fa-crown" title="Coroa">
-                                <i class="fas fa-crown"></i>
-                                <span>Coroa</span>
-                            </button>
-                            <button type="button" class="icon-suggestion" data-icon="fas fa-trophy" title="Troféu">
-                                <i class="fas fa-trophy"></i>
-                                <span>Troféu</span>
-                            </button>
-                            <button type="button" class="icon-suggestion" data-icon="fas fa-film" title="Filme">
-                                <i class="fas fa-film"></i>
-                                <span>Filme</span>
-                            </button>
-                            <button type="button" class="icon-suggestion" data-icon="fas fa-magic" title="Mágica">
-                                <i class="fas fa-magic"></i>
-                                <span>Mágica</span>
-                            </button>
-                            <button type="button" class="icon-suggestion" data-icon="fas fa-rocket" title="Foguete">
-                                <i class="fas fa-rocket"></i>
-                                <span>Foguete</span>
-                            </button>
-                            <button type="button" class="icon-suggestion" data-icon="fas fa-bolt" title="Raio">
-                                <i class="fas fa-bolt"></i>
-                                <span>Raio</span>
-                            </button>
-                        </div>
                     </div>
                     
                     <div class="flex gap-3">
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-save"></i>
-                            Salvar Ícone
+                            Enviar Logo
                         </button>
                         
-                        <button type="button" class="btn btn-secondary" id="restoreIconBtn">
+                        <?php if ($systemSettings->getSetting('system_logo_path')): ?>
+                        <button type="button" class="btn btn-secondary" id="restoreLogoBtn">
                             <i class="fas fa-undo"></i>
                             Restaurar Padrão
                         </button>
-                        
-                        <button type="button" class="btn btn-info" id="previewIconBtn">
-                            <i class="fas fa-eye"></i>
-                            Preview
-                        </button>
+                        <?php endif; ?>
                     </div>
                 </form>
             </div>
         </div>
         
-        <!-- Icon Guidelines -->
+        <!-- Logo Guidelines -->
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title">📋 Diretrizes para Ícones</h3>
+                <h3 class="card-title">📋 Diretrizes para Logo</h3>
             </div>
             <div class="card-body">
                 <div class="space-y-3 text-sm">
                     <div class="flex items-start gap-3">
                         <i class="fas fa-check-circle text-success-500 mt-0.5"></i>
                         <div>
-                            <p class="font-medium">Use Font Awesome 6</p>
-                            <p class="text-muted">Classes como fas, far, fab seguidas do nome do ícone</p>
+                            <p class="font-medium">Tamanho recomendado</p>
+                            <p class="text-muted">64x64px ou 128x128px para melhor qualidade</p>
                         </div>
                     </div>
                     <div class="flex items-start gap-3">
                         <i class="fas fa-check-circle text-success-500 mt-0.5"></i>
                         <div>
-                            <p class="font-medium">Formato correto</p>
-                            <p class="text-muted">Exemplo: "fas fa-futbol" ou "fas fa-star"</p>
+                            <p class="font-medium">Formatos suportados</p>
+                            <p class="text-muted">PNG (recomendado), JPG, GIF, WebP</p>
                         </div>
                     </div>
                     <div class="flex items-start gap-3">
                         <i class="fas fa-check-circle text-success-500 mt-0.5"></i>
                         <div>
-                            <p class="font-medium">Teste antes de salvar</p>
-                            <p class="text-muted">Use o botão "Preview" para ver como ficará</p>
+                            <p class="font-medium">Fundo transparente</p>
+                            <p class="text-muted">Use PNG com fundo transparente para melhor resultado</p>
                         </div>
                     </div>
                     <div class="flex items-start gap-3">
                         <i class="fas fa-info-circle text-primary-500 mt-0.5"></i>
                         <div>
                             <p class="font-medium">Aplicação automática</p>
-                            <p class="text-muted">O ícone será aplicado em todo o sistema automaticamente</p>
+                            <p class="text-muted">O logo será aplicado em todo o sistema automaticamente</p>
                         </div>
                     </div>
                 </div>
@@ -701,6 +681,42 @@ include "includes/header.php";
         flex: 1;
     }
     
+    /* Logo Styles */
+    .logo-preview-section {
+        background: var(--bg-secondary);
+        border-radius: var(--border-radius);
+        padding: 1rem;
+    }
+    
+    .logo-preview {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 0.5rem;
+    }
+    
+    .logo-display {
+        width: 80px;
+        height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        padding: 0.5rem;
+    }
+    
+    .system-logo-preview {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+    
+    .logo-info {
+        flex: 1;
+    }
+    
     .space-y-3 > * + * {
         margin-top: 0.75rem;
     }
@@ -741,6 +757,125 @@ include "includes/header.php";
     
     [data-theme="dark"] .border-gray-200 {
         border-color: var(--border-color);
+    }
+    
+    /* Icon Management Styles */
+    .icon-preview-section {
+        background: var(--bg-secondary);
+        border-radius: var(--border-radius);
+        padding: 1rem;
+    }
+    
+    .icon-preview {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 0.5rem;
+    }
+    
+    .icon-display {
+        width: 80px;
+        height: 80px;
+        border-radius: var(--border-radius);
+        border: 1px solid var(--border-color);
+        background: var(--bg-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .icon-info {
+        flex: 1;
+    }
+    
+    .icon-info code {
+        background: var(--bg-tertiary);
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 0.875rem;
+    }
+    
+    .icon-suggestions {
+        margin-bottom: 1rem;
+    }
+    
+    .icon-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 0.75rem;
+        margin-top: 0.5rem;
+    }
+    
+    .icon-suggestion {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 1rem 0.5rem;
+        background: var(--bg-secondary);
+        border: 2px solid var(--border-color);
+        border-radius: var(--border-radius);
+        cursor: pointer;
+        transition: var(--transition);
+        font-size: 0.75rem;
+        text-align: center;
+    }
+    
+    .icon-suggestion:hover {
+        border-color: var(--primary-500);
+        background: var(--primary-50);
+        transform: translateY(-2px);
+    }
+    
+    .icon-suggestion.selected {
+        border-color: var(--primary-500);
+        background: var(--primary-50);
+        box-shadow: var(--shadow-md);
+    }
+    
+    .icon-suggestion i {
+        font-size: 1.5rem;
+        color: var(--primary-500);
+    }
+    
+    .icon-suggestion span {
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+    
+    .icon-suggestion:hover span {
+        color: var(--primary-600);
+    }
+    
+    .icon-suggestion.selected span {
+        color: var(--primary-600);
+        font-weight: 600;
+    }
+    
+    .text-4xl {
+        font-size: 2.25rem;
+        line-height: 2.5rem;
+    }
+    
+    /* Dark theme adjustments for icons */
+    [data-theme="dark"] .icon-suggestion:hover {
+        background: rgba(59, 130, 246, 0.1);
+        border-color: var(--primary-400);
+    }
+    
+    [data-theme="dark"] .icon-suggestion.selected {
+        background: rgba(59, 130, 246, 0.1);
+        border-color: var(--primary-400);
+    }
+    
+    [data-theme="dark"] .icon-suggestion i {
+        color: var(--primary-400);
+    }
+    
+    [data-theme="dark"] .icon-suggestion:hover span,
+    [data-theme="dark"] .icon-suggestion.selected span {
+        color: var(--primary-400);
     }
 </style>
 
@@ -933,6 +1068,96 @@ document.addEventListener('DOMContentLoaded', function() {
                 Swal.fire({
                     title: 'Nenhum Arquivo Selecionado',
                     text: 'Por favor, selecione um arquivo de favicon primeiro.',
+                    icon: 'warning',
+                    background: document.body.getAttribute('data-theme') === 'dark' ? '#1e293b' : '#ffffff',
+                    color: document.body.getAttribute('data-theme') === 'dark' ? '#f1f5f9' : '#1e293b'
+                });
+                return;
+            }
+        });
+    }
+    
+    // Logo functionality
+    const logoInput = document.getElementById('system_logo');
+    const restoreLogoBtn = document.getElementById('restoreLogoBtn');
+    
+    // Preview logo before upload
+    if (logoInput) {
+        logoInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Validar tipo de arquivo
+                const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+                if (!allowedTypes.includes(file.type)) {
+                    Swal.fire({
+                        title: 'Arquivo Inválido',
+                        text: 'Por favor, selecione um arquivo PNG, JPG, GIF ou WebP.',
+                        icon: 'error',
+                        background: document.body.getAttribute('data-theme') === 'dark' ? '#1e293b' : '#ffffff',
+                        color: document.body.getAttribute('data-theme') === 'dark' ? '#f1f5f9' : '#1e293b'
+                    });
+                    this.value = '';
+                    return;
+                }
+                
+                // Validar tamanho (2MB)
+                if (file.size > 2 * 1024 * 1024) {
+                    Swal.fire({
+                        title: 'Arquivo Muito Grande',
+                        text: 'O arquivo deve ter no máximo 2MB.',
+                        icon: 'error',
+                        background: document.body.getAttribute('data-theme') === 'dark' ? '#1e293b' : '#ffffff',
+                        color: document.body.getAttribute('data-theme') === 'dark' ? '#f1f5f9' : '#1e293b'
+                    });
+                    this.value = '';
+                    return;
+                }
+                
+                // Preview da imagem
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const logoDisplay = document.querySelector('.logo-display');
+                    logoDisplay.innerHTML = `<img src="${e.target.result}" alt="Preview do Logo" class="system-logo-preview">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+    
+    // Restore default logo
+    if (restoreLogoBtn) {
+        restoreLogoBtn.addEventListener('click', function() {
+            Swal.fire({
+                title: 'Restaurar Logo Padrão?',
+                text: 'Isso irá remover o logo personalizado e usar o ícone padrão do sistema.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Sim, restaurar',
+                cancelButtonText: 'Cancelar',
+                background: document.body.getAttribute('data-theme') === 'dark' ? '#1e293b' : '#ffffff',
+                color: document.body.getAttribute('data-theme') === 'dark' ? '#f1f5f9' : '#1e293b'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.innerHTML = '<input type="hidden" name="action" value="restore_logo">';
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
+        });
+    }
+    
+    // Logo form submission
+    const logoForm = document.getElementById('logoForm');
+    if (logoForm) {
+        logoForm.addEventListener('submit', function(e) {
+            const fileInput = document.getElementById('system_logo');
+            if (!fileInput.files.length) {
+                e.preventDefault();
+                Swal.fire({
+                    title: 'Nenhum Arquivo Selecionado',
+                    text: 'Por favor, selecione um arquivo de logo primeiro.',
                     icon: 'warning',
                     background: document.body.getAttribute('data-theme') === 'dark' ? '#1e293b' : '#ffffff',
                     color: document.body.getAttribute('data-theme') === 'dark' ? '#f1f5f9' : '#1e293b'

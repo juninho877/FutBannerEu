@@ -239,6 +239,110 @@ class SystemSettings {
     }
     
     /**
+     * Salvar logo personalizado do sistema
+     * @param array $file Array do arquivo $_FILES
+     * @return array Resultado da operação
+     */
+    public function saveSystemLogo($file) {
+        try {
+            // Validar arquivo
+            $allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+            $allowedExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp'];
+            
+            if (!in_array($file['type'], $allowedTypes)) {
+                return ['success' => false, 'message' => 'Tipo de arquivo inválido. Use PNG, JPG, GIF ou WebP.'];
+            }
+            
+            $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            if (!in_array($extension, $allowedExtensions)) {
+                return ['success' => false, 'message' => 'Extensão de arquivo inválida.'];
+            }
+            
+            // Verificar tamanho (máximo 2MB)
+            if ($file['size'] > 2 * 1024 * 1024) {
+                return ['success' => false, 'message' => 'Arquivo muito grande. Máximo 2MB.'];
+            }
+            
+            // Criar diretório se não existir
+            $uploadDir = __DIR__ . '/../assets/';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+            
+            // Nome do arquivo
+            $fileName = 'system_logo.' . $extension;
+            $destination = $uploadDir . $fileName;
+            
+            // Remover logo anterior se existir
+            $oldLogo = $this->getSetting('system_logo_path');
+            if ($oldLogo && file_exists(__DIR__ . '/../' . $oldLogo)) {
+                unlink(__DIR__ . '/../' . $oldLogo);
+            }
+            
+            // Mover arquivo
+            if (move_uploaded_file($file['tmp_name'], $destination)) {
+                $relativePath = 'assets/' . $fileName;
+                
+                // Salvar configuração
+                $this->setSetting('system_logo_path', $relativePath, 'file');
+                $this->setSetting('system_logo_updated_at', date('Y-m-d H:i:s'), 'text');
+                
+                return [
+                    'success' => true, 
+                    'message' => 'Logo do sistema atualizado com sucesso!',
+                    'path' => $relativePath
+                ];
+            } else {
+                return ['success' => false, 'message' => 'Erro ao salvar o arquivo.'];
+            }
+        } catch (Exception $e) {
+            error_log("Erro ao salvar logo do sistema: " . $e->getMessage());
+            return ['success' => false, 'message' => 'Erro interno: ' . $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Restaurar logo padrão do sistema
+     * @return array Resultado da operação
+     */
+    public function restoreDefaultSystemLogo() {
+        try {
+            // Remover arquivo personalizado se existir
+            $currentLogo = $this->getSetting('system_logo_path');
+            if ($currentLogo && file_exists(__DIR__ . '/../' . $currentLogo)) {
+                unlink(__DIR__ . '/../' . $currentLogo);
+            }
+            
+            // Remover configurações
+            $this->deleteSetting('system_logo_path');
+            $this->deleteSetting('system_logo_updated_at');
+            
+            return [
+                'success' => true, 
+                'message' => 'Logo padrão restaurado com sucesso!'
+            ];
+        } catch (Exception $e) {
+            error_log("Erro ao restaurar logo padrão: " . $e->getMessage());
+            return ['success' => false, 'message' => 'Erro interno: ' . $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Obter URL do logo atual do sistema
+     * @return string URL do logo
+     */
+    public function getSystemLogoUrl() {
+        $customLogo = $this->getSetting('system_logo_path');
+        
+        if ($customLogo && file_exists(__DIR__ . '/../' . $customLogo)) {
+            return $customLogo . '?v=' . time(); // Cache busting
+        }
+        
+        // Logo padrão (ícone de futebol via Font Awesome)
+        return null; // Retorna null para usar Font Awesome
+    }
+    
+    /**
      * Obter URL do favicon atual
      * @return string URL do favicon
      */

@@ -220,6 +220,13 @@ if (isset($_SESSION['registration_success'])) {
             border: 2px solid rgba(255, 255, 255, 0.2);
             animation: pulse 2s infinite;
         }
+        
+        .login-logo-img {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+            border-radius: 50%;
+        }
 
         .login-title {
             font-size: 2rem;
@@ -527,7 +534,17 @@ if (isset($_SESSION['registration_success'])) {
             </button>
             
             <div class="logo">
-                <i class="fas fa-futbol"></i>
+                <?php
+                $customLogoUrl = $systemSettings->getSystemLogoUrl();
+                if ($customLogoUrl): ?>
+                    <img src="<?php echo htmlspecialchars($customLogoUrl); ?>" alt="FutBanner" class="login-logo-img">
+                <?php else: ?>
+                    <i class="fas fa-futbol"></i>
+                <?php endif; ?>
+                    require_once 'classes/SystemSettings.php';
+                    $systemSettings = new SystemSettings();
+                    echo htmlspecialchars($systemSettings->getSetting('system_icon', 'fas fa-futbol'));
+                ?>"></i>
             </div>
             <h1 class="login-title">FutBanner</h1>
             <p class="login-subtitle">Sistema de Geração de Banners</p>

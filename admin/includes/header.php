@@ -221,6 +221,13 @@ if ($isTempUser) {
             color: white;
             font-size: 1rem;
         }
+        
+        .sidebar-logo-img {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+            border-radius: var(--border-radius-sm);
+        }
 
         /* Theme Toggle */
         .theme-toggle {
@@ -734,7 +741,17 @@ if ($isTempUser) {
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <a href="index.php" class="sidebar-logo">
-                    <i class="fas fa-futbol"></i>
+                    <?php
+                    $customLogoUrl = $systemSettings->getSystemLogoUrl();
+                    if ($customLogoUrl): ?>
+                        <img src="<?php echo htmlspecialchars($customLogoUrl); ?>" alt="FutBanner" class="sidebar-logo-img">
+                    <?php else: ?>
+                        <i class="fas fa-futbol"></i>
+                    <?php endif; ?>
+                        require_once __DIR__ . '/../classes/SystemSettings.php';
+                        $systemSettings = new SystemSettings();
+                        echo htmlspecialchars($systemSettings->getSetting('system_icon', 'fas fa-futbol'));
+                    ?>"></i>
                     <span>FutBanner</span>
                 </a>
                 <button class="theme-toggle" id="themeToggle">
