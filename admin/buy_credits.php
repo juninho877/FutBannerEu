@@ -194,6 +194,30 @@ include "includes/header.php";
                                 <i class="fas fa-info-circle"></i>
                                 Copie este código e cole no seu app bancário para pagar via PIX
                             </p>
+                            
+                            <!-- PIX Copy-Paste Code Section -->
+                            <?php if (isset($_SESSION['credit_payment_pix_code']) && !empty($_SESSION['credit_payment_pix_code'])): ?>
+                            <div class="pix-code-section">
+                                <label class="pix-code-label">
+                                    <i class="fas fa-copy"></i>
+                                    Código PIX (Copia e Cola):
+                                </label>
+                                <div class="pix-code-container">
+                                    <input type="text" id="pixCode" class="pix-code-input" 
+                                           value="<?php echo htmlspecialchars($_SESSION['credit_payment_pix_code']); ?>" 
+                                           readonly onclick="this.select()">
+                                    <button type="button" id="copyPixBtn" class="copy-pix-btn">
+                                        <i class="fas fa-copy"></i>
+                                        Copiar
+                                    </button>
+                                </div>
+                                <p class="pix-code-help">
+                                    <i class="fas fa-info-circle"></i>
+                                    Copie este código e cole no seu app bancário para pagar via PIX
+                                </p>
+                            </div>
+                            <?php endif; ?>
+                            
                         </div>
                         <?php endif; ?>
                         
