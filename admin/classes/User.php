@@ -114,6 +114,15 @@ class User {
                 }
             }
             
+            // Aplicar teste grátis se especificado
+            if (isset($data['apply_trial']) && $data['apply_trial'] && isset($data['trial_duration_days'])) {
+                $trialDays = intval($data['trial_duration_days']);
+                if ($trialDays > 0) {
+                    $data['expires_at'] = date('Y-m-d', strtotime("+{$trialDays} days"));
+                    $data['status'] = 'active'; // Garantir que o usuário esteja ativo durante o teste
+                }
+            }
+            
             // Se for um usuário criado por um master, verificar se o master tem créditos suficientes
             $parentUserId = $data['parent_user_id'] ?? null;
             if ($parentUserId && $data['role'] === 'user') {
@@ -126,24 +135,26 @@ class User {
                     return ['success' => false, 'message' => 'Usuário master não encontrado ou não tem permissão'];
                 }
                 
-                // Verificar se o master tem créditos suficientes
-                if ($masterUser['credits'] < 1) {
-                    return ['success' => false, 'message' => 'O usuário master não tem créditos suficientes'];
+                // Verificar se o master tem créditos suficientes (apenas se não for teste grátis)
+                if (!isset($data['apply_trial']) || !$data['apply_trial']) {
+                    if ($masterUser['credits'] < 1) {
+                        return ['success' => false, 'message' => 'O usuário master não tem créditos suficientes'];
+                    }
+                    
+                    // Deduzir um crédito do master
+                    $this->deductCredits($parentUserId, 1);
+                    
+                    // Registrar a transação
+                    $creditTransaction = new CreditTransaction();
+                    $creditTransaction->recordTransaction(
+                        $parentUserId,
+                        'user_creation',
+                        -1,
+                        "Criação do usuário {$data['username']}",
+                        null,
+                        null
+                    );
                 }
-                
-                // Deduzir um crédito do master
-                $this->deductCredits($parentUserId, 1);
-                
-                // Registrar a transação
-                $creditTransaction = new CreditTransaction();
-                $creditTransaction->recordTransaction(
-                    $parentUserId,
-                    'user_creation',
-                    -1,
-                    "Criação do usuário {$data['username']}",
-                    null,
-                    null
-                );
             }
             
             $stmt = $this->db->prepare("
@@ -483,6 +494,23 @@ class User {
             $this->db->rollBack();
             error_log("Erro ao comprar créditos: " . $e->getMessage());
             return ['success' => false, 'message' => 'Erro ao comprar créditos: ' . $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Obter configurações de teste grátis do admin
+     * @return int Duração do teste em dias
+     */
+    public function getTrialDurationDays() {
+        try {
+            require_once 'MercadoPagoSettings.php';
+            $mercadoPagoSettings = new MercadoPagoSettings();
+            $adminSettings = $mercadoPagoSettings->getSettings(1); // Admin ID = 1
+            
+            return $adminSettings['trial_duration_days'] ?? 7; // Padrão de 7 dias
+        } catch (Exception $e) {
+            error_log("Erro ao obter duração do teste: " . $e->getMessage());
+            return 7; // Padrão de 7 dias em caso de erro
         }
     }
 }

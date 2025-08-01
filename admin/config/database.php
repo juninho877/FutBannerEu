@@ -216,6 +216,23 @@ class Database {
                 ");
             }
             
+            // Verificar se a coluna trial_duration_days existe
+            $stmt = $this->connection->prepare("
+                SELECT COUNT(*) as column_exists 
+                FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'mercadopago_settings' AND COLUMN_NAME = 'trial_duration_days'
+            ");
+            $stmt->execute([$this->dbname]);
+            $result = $stmt->fetch();
+            
+            if ($result['column_exists'] == 0) {
+                // Adicionar coluna para duração do teste grátis
+                $this->connection->exec("
+                    ALTER TABLE mercadopago_settings 
+                    ADD COLUMN trial_duration_days INT DEFAULT 7 AFTER min_credit_purchase
+                ");
+            }
+            
             // Verificar se a coluna credits existe na tabela usuarios
             $stmt = $this->connection->prepare("
                 SELECT COUNT(*) as column_exists 

@@ -25,6 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $discount12Months = floatval(str_replace(',', '.', $_POST['discount_12_months']));
                 $creditPrice = floatval(str_replace(',', '.', $_POST['credit_price']));
                 $minCreditPurchase = intval($_POST['min_credit_purchase']);
+                $trialDurationDays = intval($_POST['trial_duration_days']);
                 
                 $result = $mercadoPagoSettings->saveSettings(
                     $userId, 
@@ -35,7 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $discount6Months,
                     $discount12Months,
                     $creditPrice,
-                    $minCreditPurchase
+                    $minCreditPurchase,
+                    $trialDurationDays
                 );
                 
                 $message = $result['message'];
@@ -239,6 +241,25 @@ include "includes/header.php";
                             </div>
                         </div>
                     </div>
+                    
+                    <div class="border-t border-gray-200 my-6 pt-6">
+                        <h4 class="text-lg font-semibold mb-4">
+                            <i class="fas fa-gift mr-2"></i>
+                            Configuração de Teste Grátis
+                        </h4>
+                        
+                        <div class="form-group">
+                            <label for="trial_duration_days" class="form-label required">
+                                Duração do Teste Grátis (dias)
+                            </label>
+                            <input type="number" id="trial_duration_days" name="trial_duration_days" class="form-input" 
+                                   value="<?php echo htmlspecialchars($currentSettings['trial_duration_days'] ?? 7); ?>" 
+                                   placeholder="7" min="0" step="1" required>
+                            <p class="text-xs text-muted mt-1">
+                                Quantos dias de teste grátis os novos usuários receberão ao se cadastrar
+                            </p>
+                        </div>
+                    </div>
 
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary">
@@ -376,6 +397,13 @@ include "includes/header.php";
                             <p class="font-semibold text-primary-600"><?php echo $currentSettings['min_credit_purchase'] ?? 1; ?> créditos</p>
                         </div>
                     </div>
+                </div>
+                
+                <div class="mt-4 p-3 bg-gray-50 rounded-lg">
+                    <p class="text-sm font-medium mb-2">Teste Grátis:</p>
+                    <p class="text-xl font-bold text-info-500">
+                        <?php echo $currentSettings['trial_duration_days'] ?? 7; ?> dias
+                    </p>
                 </div>
                 
                 <?php if (!empty($currentSettings['whatsapp_number'])): ?>
@@ -715,6 +743,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const discount12MonthsInput = document.getElementById('discount_12_months');
     const creditPriceInput = document.getElementById('credit_price');
     const minCreditPurchaseInput = document.getElementById('min_credit_purchase');
+    const trialDurationInput = document.getElementById('trial_duration_days');
 
     // Formatar valor monetário
     userAccessValueInput.addEventListener('input', function(e) {
@@ -746,6 +775,14 @@ document.addEventListener('DOMContentLoaded', function() {
         let value = parseInt(e.target.value);
         if (isNaN(value) || value < 1) {
             e.target.value = 1;
+        }
+    });
+    
+    // Validar duração do teste
+    trialDurationInput.addEventListener('input', function(e) {
+        let value = parseInt(e.target.value);
+        if (isNaN(value) || value < 0) {
+            e.target.value = 0;
         }
     });
 

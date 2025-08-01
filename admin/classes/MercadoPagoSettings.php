@@ -24,9 +24,10 @@ class MercadoPagoSettings {
      * @param float $discount12Months Porcentagem de desconto para 12 meses
      * @param float $creditPrice Preço por crédito
      * @param int $minCreditPurchase Compra mínima de créditos
+     * @param int $trialDurationDays Duração do teste grátis em dias
      * @return array Resultado da operação
      */
-    public function saveSettings($userId, $accessToken, $userAccessValue, $whatsappNumber = null, $discount3Months = 5.00, $discount6Months = 10.00, $discount12Months = 15.00, $creditPrice = 1.00, $minCreditPurchase = 1) {
+    public function saveSettings($userId, $accessToken, $userAccessValue, $whatsappNumber = null, $discount3Months = 5.00, $discount6Months = 10.00, $discount12Months = 15.00, $creditPrice = 1.00, $minCreditPurchase = 1, $trialDurationDays = 7) {
         try {
             // Validar parâmetros
             if (empty($accessToken)) {
@@ -59,6 +60,11 @@ class MercadoPagoSettings {
                 return ['success' => false, 'message' => 'Compra mínima de créditos deve ser pelo menos 1'];
             }
             
+            // Validar duração do teste
+            if (!is_numeric($trialDurationDays) || $trialDurationDays < 0) {
+                return ['success' => false, 'message' => 'Duração do teste deve ser um número não negativo'];
+            }
+            
             // Validar número de WhatsApp (formato básico)
             if (!empty($whatsappNumber) && !preg_match('/^\d{10,15}$/', preg_replace('/\D/', '', $whatsappNumber))) {
                 return ['success' => false, 'message' => 'Número de WhatsApp inválido. Use apenas números.'];
@@ -82,9 +88,10 @@ class MercadoPagoSettings {
                     discount_6_months_percent, 
                     discount_12_months_percent,
                     credit_price,
-                    min_credit_purchase
+                    min_credit_purchase,
+                    trial_duration_days
                 ) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE 
                 access_token = VALUES(access_token), 
                 user_access_value = VALUES(user_access_value),
@@ -94,6 +101,7 @@ class MercadoPagoSettings {
                 discount_12_months_percent = VALUES(discount_12_months_percent),
                 credit_price = VALUES(credit_price),
                 min_credit_purchase = VALUES(min_credit_purchase),
+                trial_duration_days = VALUES(trial_duration_days),
                 updated_at = CURRENT_TIMESTAMP
             ");
             
@@ -106,7 +114,8 @@ class MercadoPagoSettings {
                 $discount6Months,
                 $discount12Months,
                 $creditPrice,
-                $minCreditPurchase
+                $minCreditPurchase,
+                $trialDurationDays
             ]);
             
             return ['success' => true, 'message' => 'Configurações do Mercado Pago salvas com sucesso'];
@@ -135,6 +144,7 @@ class MercadoPagoSettings {
                     discount_12_months_percent,
                     credit_price,
                     min_credit_purchase,
+                    trial_duration_days,
                     created_at, 
                     updated_at 
                 FROM mercadopago_settings 
