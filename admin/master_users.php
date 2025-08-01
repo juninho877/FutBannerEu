@@ -227,10 +227,10 @@ include "includes/header.php";
                                     <?php elseif ($isExpired): ?>
                                         <span class="status-badge status-expired">Expirado</span>
                                     <?php elseif ($userData['status'] === 'trial'): ?>
-                                        <span class="status-badge status-trial">Em Teste</span>
+                                        <span class="status-badge status-trial">🔵 Em Teste</span>
                                     <?php else: ?>
                                         <span class="status-badge status-<?php echo $userData['status']; ?>">
-                                            <?php echo $userData['status'] === 'active' ? 'Ativo' : 'Inativo'; ?>
+                                            <?php echo $userData['status'] === 'active' ? '🟢 Ativo' : '🔴 Inativo'; ?>
                                         </span>
                                     <?php endif; ?>
                                 </td>
@@ -362,8 +362,9 @@ include "includes/header.php";
     }
     
     .status-trial {
-        background: var(--info-50);
-        color: var(--info-600);
+        background: #dbeafe;
+        color: #1d4ed8;
+        border: 1px solid #93c5fd;
     }
     
     .status-trial-expired {
@@ -471,8 +472,9 @@ include "includes/header.php";
     }
     
     [data-theme="dark"] .status-trial {
-        background: rgba(59, 130, 246, 0.1);
-        color: var(--info-400);
+        background: rgba(59, 130, 246, 0.15);
+        color: #60a5fa;
+        border-color: rgba(59, 130, 246, 0.3);
     }
     
     [data-theme="dark"] .status-trial-expired {

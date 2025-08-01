@@ -868,7 +868,19 @@ if ($isTempUser) {
                             }
                             ?>
                             <?php if ($isExpired): ?>
-                            <span class="expired-badge">Expirado</span>
+                            <span class="expired-badge">
+                                <?php 
+                                // Verificar se é trial expirado ou assinatura expirada
+                                if ($isLoggedIn && isset($_SESSION["user_id"])) {
+                                    require_once __DIR__ . '/../classes/User.php';
+                                    $userObj = new User();
+                                    $userData = $userObj->getUserById($_SESSION["user_id"]);
+                                    echo $userData['status'] === 'trial' ? '🔴 Trial Expirado' : '🟠 Expirado';
+                                } else {
+                                    echo '🟠 Expirado';
+                                }
+                                ?>
+                            </span>
                             <?php endif; ?>
                         </p>
                     </div>
