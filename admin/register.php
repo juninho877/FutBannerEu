@@ -141,6 +141,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>Cadastro - FutBanner</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <?php
+    // Favicon dinâmico
+    require_once 'classes/SystemSettings.php';
+    $systemSettings = new SystemSettings();
+    $faviconUrl = $systemSettings->getFaviconUrl();
+    ?>
+    <link rel="icon" type="image/x-icon" href="<?php echo htmlspecialchars($faviconUrl); ?>">
+    <link rel="shortcut icon" type="image/x-icon" href="<?php echo htmlspecialchars($faviconUrl); ?>">
+    <link rel="apple-touch-icon" href="<?php echo htmlspecialchars($faviconUrl); ?>">
+    
     <style>
         :root {
             /* Light Theme */

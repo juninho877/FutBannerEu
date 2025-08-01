@@ -6,14 +6,17 @@ if (!isset($_SESSION["usuario"])) {
 }
 
 require_once 'classes/User.php';
+require_once 'classes/SystemSettings.php';
 
 $user = new User();
+$systemSettings = new SystemSettings();
 $mensagem = "";
 $tipoMensagem = "";
 
 // Buscar dados atuais do usuário
 $userId = $_SESSION['user_id'];
 $currentUserData = null;
+$isAdmin = $_SESSION['role'] === 'admin';
 
 try {
     $currentUserData = $user->getUserById($userId);
@@ -27,63 +30,80 @@ try {
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && $currentUserData) {
-    $novo_usuario = trim($_POST["novo_usuario"]);
-    $senha_atual = trim($_POST["senha_atual"]);
-    $nova_senha = trim($_POST["nova_senha"]);
-    $confirmar_senha = trim($_POST["confirmar_senha"]);
-
-    // Validações básicas
-    if (empty($novo_usuario)) {
-        $mensagem = "O nome de usuário não pode estar vazio!";
-        $tipoMensagem = "error";
-    } elseif (empty($senha_atual)) {
-        $mensagem = "A senha atual é obrigatória para confirmar as alterações!";
-        $tipoMensagem = "error";
-    } elseif (empty($nova_senha)) {
-        $mensagem = "A nova senha é obrigatória!";
-        $tipoMensagem = "error";
-    } elseif (strlen($nova_senha) < 6) {
-        $mensagem = "A nova senha deve ter pelo menos 6 caracteres!";
-        $tipoMensagem = "error";
-    } elseif ($nova_senha !== $confirmar_senha) {
-        $mensagem = "As novas senhas não coincidem!";
-        $tipoMensagem = "error";
-    } else {
-        // Tentar autenticar o usuário com a senha atual usando a classe User
-        try {
-            $authResult = $user->authenticate($currentUserData['username'], $senha_atual);
-            
-            if (!$authResult['success']) {
-                $mensagem = "Senha atual incorreta! Verifique se digitou corretamente.";
-                $tipoMensagem = "error";
-            } else {
-                // Preparar dados para atualização
-                $updateData = [
-                    'username' => $novo_usuario,
-                    'email' => $currentUserData['email'], // Manter email atual
-                    'role' => $currentUserData['role'], // Manter role atual
-                    'status' => $currentUserData['status'], // Manter status atual
-                    'expires_at' => $currentUserData['expires_at'], // Manter data de expiração atual
-                    'password' => $nova_senha // Nova senha
-                ];
-                
-                $result = $user->updateUser($userId, $updateData);
-                
-                if ($result['success']) {
-                    $_SESSION["usuario"] = $novo_usuario;
-                    $mensagem = "Usuário e senha alterados com sucesso!";
-                    $tipoMensagem = "success";
-                    
-                    // Recarregar dados do usuário
-                    $currentUserData = $user->getUserById($userId);
-                } else {
-                    $mensagem = $result['message'];
-                    $tipoMensagem = "error";
-                }
-            }
-        } catch (Exception $e) {
-            $mensagem = "Erro ao verificar senha: " . $e->getMessage();
+    // Verificar se é upload de favicon (apenas admin)
+    if ($isAdmin && isset($_POST['action']) && $_POST['action'] === 'upload_favicon') {
+        if (isset($_FILES['favicon']) && $_FILES['favicon']['error'] === 0) {
+            $result = $systemSettings->saveFavicon($_FILES['favicon']);
+            $mensagem = $result['message'];
+            $tipoMensagem = $result['success'] ? 'success' : 'error';
+        } else {
+            $mensagem = "Nenhum arquivo foi enviado ou ocorreu um erro no upload.";
             $tipoMensagem = "error";
+        }
+    } elseif ($isAdmin && isset($_POST['action']) && $_POST['action'] === 'restore_favicon') {
+        $result = $systemSettings->restoreDefaultFavicon();
+        $mensagem = $result['message'];
+        $tipoMensagem = $result['success'] ? 'success' : 'error';
+    } else {
+        // Lógica original de alteração de usuário
+        $novo_usuario = trim($_POST["novo_usuario"]);
+        $senha_atual = trim($_POST["senha_atual"]);
+        $nova_senha = trim($_POST["nova_senha"]);
+        $confirmar_senha = trim($_POST["confirmar_senha"]);
+
+        // Validações básicas
+        if (empty($novo_usuario)) {
+            $mensagem = "O nome de usuário não pode estar vazio!";
+            $tipoMensagem = "error";
+        } elseif (empty($senha_atual)) {
+            $mensagem = "A senha atual é obrigatória para confirmar as alterações!";
+            $tipoMensagem = "error";
+        } elseif (empty($nova_senha)) {
+            $mensagem = "A nova senha é obrigatória!";
+            $tipoMensagem = "error";
+        } elseif (strlen($nova_senha) < 6) {
+            $mensagem = "A nova senha deve ter pelo menos 6 caracteres!";
+            $tipoMensagem = "error";
+        } elseif ($nova_senha !== $confirmar_senha) {
+            $mensagem = "As novas senhas não coincidem!";
+            $tipoMensagem = "error";
+        } else {
+            // Tentar autenticar o usuário com a senha atual usando a classe User
+            try {
+                $authResult = $user->authenticate($currentUserData['username'], $senha_atual);
+                
+                if (!$authResult['success']) {
+                    $mensagem = "Senha atual incorreta! Verifique se digitou corretamente.";
+                    $tipoMensagem = "error";
+                } else {
+                    // Preparar dados para atualização
+                    $updateData = [
+                        'username' => $novo_usuario,
+                        'email' => $currentUserData['email'], // Manter email atual
+                        'role' => $currentUserData['role'], // Manter role atual
+                        'status' => $currentUserData['status'], // Manter status atual
+                        'expires_at' => $currentUserData['expires_at'], // Manter data de expiração atual
+                        'password' => $nova_senha // Nova senha
+                    ];
+                    
+                    $result = $user->updateUser($userId, $updateData);
+                    
+                    if ($result['success']) {
+                        $_SESSION["usuario"] = $novo_usuario;
+                        $mensagem = "Usuário e senha alterados com sucesso!";
+                        $tipoMensagem = "success";
+                        
+                        // Recarregar dados do usuário
+                        $currentUserData = $user->getUserById($userId);
+                    } else {
+                        $mensagem = $result['message'];
+                        $tipoMensagem = "error";
+                    }
+                }
+            } catch (Exception $e) {
+                $mensagem = "Erro ao verificar senha: " . $e->getMessage();
+                $tipoMensagem = "error";
+            }
         }
     }
 }
@@ -102,7 +122,7 @@ include "includes/header.php";
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
     <!-- Main Settings Form -->
-    <div class="lg:col-span-2">
+    <div class="<?php echo $isAdmin ? '' : 'lg:col-span-2'; ?>">
         <div class="card">
             <div class="card-header">
                 <h3 class="card-title">Informações da Conta</h3>
@@ -206,6 +226,120 @@ include "includes/header.php";
             </div>
         </div>
     </div>
+    
+    <?php if ($isAdmin): ?>
+    <!-- Admin Settings -->
+    <div class="space-y-6">
+        <!-- Favicon Settings -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-image text-primary-500 mr-2"></i>
+                    Favicon do Sistema
+                </h3>
+                <p class="card-subtitle">Personalize o ícone que aparece na aba do navegador</p>
+            </div>
+            <div class="card-body">
+                <!-- Preview do Favicon Atual -->
+                <div class="favicon-preview-section mb-6">
+                    <label class="form-label">Favicon Atual:</label>
+                    <div class="favicon-preview">
+                        <img src="<?php echo htmlspecialchars($systemSettings->getFaviconUrl()); ?>" 
+                             alt="Favicon Atual" 
+                             class="favicon-image"
+                             id="faviconPreview">
+                        <div class="favicon-info">
+                            <p class="text-sm text-muted">
+                                <?php 
+                                $customFavicon = $systemSettings->getSetting('favicon_path');
+                                if ($customFavicon) {
+                                    echo 'Favicon personalizado';
+                                    $updatedAt = $systemSettings->getSetting('favicon_updated_at');
+                                    if ($updatedAt) {
+                                        echo '<br><span class="text-xs">Atualizado em: ' . date('d/m/Y H:i', strtotime($updatedAt)) . '</span>';
+                                    }
+                                } else {
+                                    echo 'Favicon padrão do sistema';
+                                }
+                                ?>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Upload Form -->
+                <form method="POST" enctype="multipart/form-data" id="faviconForm">
+                    <input type="hidden" name="action" value="upload_favicon">
+                    
+                    <div class="form-group">
+                        <label for="favicon" class="form-label">
+                            <i class="fas fa-upload mr-2"></i>
+                            Novo Favicon
+                        </label>
+                        <input type="file" id="favicon" name="favicon" class="form-input" 
+                               accept=".png,.ico,image/png,image/x-icon,image/vnd.microsoft.icon">
+                        <p class="text-xs text-muted mt-1">
+                            Formatos aceitos: PNG, ICO | Tamanho recomendado: 32x32px ou 16x16px | Máximo: 1MB
+                        </p>
+                    </div>
+                    
+                    <div class="flex gap-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-upload"></i>
+                            Enviar Favicon
+                        </button>
+                        
+                        <?php if ($systemSettings->getSetting('favicon_path')): ?>
+                        <button type="button" class="btn btn-secondary" id="restoreFaviconBtn">
+                            <i class="fas fa-undo"></i>
+                            Restaurar Padrão
+                        </button>
+                        <?php endif; ?>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Favicon Guidelines -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">📋 Diretrizes para Favicon</h3>
+            </div>
+            <div class="card-body">
+                <div class="space-y-3 text-sm">
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-check-circle text-success-500 mt-0.5"></i>
+                        <div>
+                            <p class="font-medium">Tamanho recomendado</p>
+                            <p class="text-muted">32x32px ou 16x16px para melhor compatibilidade</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-check-circle text-success-500 mt-0.5"></i>
+                        <div>
+                            <p class="font-medium">Formatos suportados</p>
+                            <p class="text-muted">PNG (recomendado) ou ICO</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-check-circle text-success-500 mt-0.5"></i>
+                        <div>
+                            <p class="font-medium">Design simples</p>
+                            <p class="text-muted">Use designs simples que funcionem em tamanhos pequenos</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-info-circle text-primary-500 mt-0.5"></i>
+                        <div>
+                            <p class="font-medium">Aplicação automática</p>
+                            <p class="text-muted">O favicon será aplicado em todo o sistema automaticamente</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <!-- Sidebar Info -->
     <div class="space-y-6">
@@ -394,6 +528,61 @@ include "includes/header.php";
         font-weight: 500;
     }
     
+    /* Favicon Styles */
+    .favicon-preview-section {
+        background: var(--bg-secondary);
+        border-radius: var(--border-radius);
+        padding: 1rem;
+    }
+    
+    .favicon-preview {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 0.5rem;
+    }
+    
+    .favicon-image {
+        width: 32px;
+        height: 32px;
+        border-radius: 4px;
+        border: 1px solid var(--border-color);
+        background: var(--bg-primary);
+        padding: 2px;
+    }
+    
+    .favicon-info {
+        flex: 1;
+    }
+    
+    .space-y-3 > * + * {
+        margin-top: 0.75rem;
+    }
+    
+    .space-y-6 > * + * {
+        margin-top: 1.5rem;
+    }
+    
+    .mr-2 {
+        margin-right: 0.5rem;
+    }
+    
+    .mt-0.5 {
+        margin-top: 0.125rem;
+    }
+    
+    .mt-1 {
+        margin-top: 0.25rem;
+    }
+    
+    .mb-6 {
+        margin-bottom: 1.5rem;
+    }
+    
+    .gap-3 {
+        gap: 0.75rem;
+    }
+    
     [data-theme="dark"] .alert-success {
         background: rgba(34, 197, 94, 0.1);
         color: var(--success-400);
@@ -515,6 +704,98 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+    
+    <?php if ($isAdmin): ?>
+    // Favicon functionality
+    const faviconInput = document.getElementById('favicon');
+    const faviconPreview = document.getElementById('faviconPreview');
+    const restoreFaviconBtn = document.getElementById('restoreFaviconBtn');
+    
+    // Preview favicon before upload
+    if (faviconInput) {
+        faviconInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Validar tipo de arquivo
+                const allowedTypes = ['image/png', 'image/x-icon', 'image/vnd.microsoft.icon', 'image/ico'];
+                if (!allowedTypes.includes(file.type)) {
+                    Swal.fire({
+                        title: 'Arquivo Inválido',
+                        text: 'Por favor, selecione um arquivo PNG ou ICO.',
+                        icon: 'error',
+                        background: document.body.getAttribute('data-theme') === 'dark' ? '#1e293b' : '#ffffff',
+                        color: document.body.getAttribute('data-theme') === 'dark' ? '#f1f5f9' : '#1e293b'
+                    });
+                    this.value = '';
+                    return;
+                }
+                
+                // Validar tamanho (1MB)
+                if (file.size > 1024 * 1024) {
+                    Swal.fire({
+                        title: 'Arquivo Muito Grande',
+                        text: 'O arquivo deve ter no máximo 1MB.',
+                        icon: 'error',
+                        background: document.body.getAttribute('data-theme') === 'dark' ? '#1e293b' : '#ffffff',
+                        color: document.body.getAttribute('data-theme') === 'dark' ? '#f1f5f9' : '#1e293b'
+                    });
+                    this.value = '';
+                    return;
+                }
+                
+                // Preview da imagem
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    faviconPreview.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+    
+    // Restore default favicon
+    if (restoreFaviconBtn) {
+        restoreFaviconBtn.addEventListener('click', function() {
+            Swal.fire({
+                title: 'Restaurar Favicon Padrão?',
+                text: 'Isso irá remover o favicon personalizado e usar o padrão do sistema.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Sim, restaurar',
+                cancelButtonText: 'Cancelar',
+                background: document.body.getAttribute('data-theme') === 'dark' ? '#1e293b' : '#ffffff',
+                color: document.body.getAttribute('data-theme') === 'dark' ? '#f1f5f9' : '#1e293b'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.innerHTML = '<input type="hidden" name="action" value="restore_favicon">';
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
+        });
+    }
+    
+    // Favicon form submission
+    const faviconForm = document.getElementById('faviconForm');
+    if (faviconForm) {
+        faviconForm.addEventListener('submit', function(e) {
+            const fileInput = document.getElementById('favicon');
+            if (!fileInput.files.length) {
+                e.preventDefault();
+                Swal.fire({
+                    title: 'Nenhum Arquivo Selecionado',
+                    text: 'Por favor, selecione um arquivo de favicon primeiro.',
+                    icon: 'warning',
+                    background: document.body.getAttribute('data-theme') === 'dark' ? '#1e293b' : '#ffffff',
+                    color: document.body.getAttribute('data-theme') === 'dark' ? '#f1f5f9' : '#1e293b'
+                });
+                return;
+            }
+        });
+    }
+    <?php endif; ?>
 });
 
 function resetForm() {

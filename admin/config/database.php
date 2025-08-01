@@ -148,6 +148,16 @@ class Database {
             INDEX idx_status (status),
             INDEX idx_created_at (created_at)
         );
+        
+        CREATE TABLE IF NOT EXISTS system_settings (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            setting_key VARCHAR(100) NOT NULL UNIQUE,
+            setting_value TEXT,
+            setting_type ENUM('text', 'file', 'boolean', 'number') DEFAULT 'text',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_setting_key (setting_key)
+        );
         ";
         
         $this->connection->exec($sql);
