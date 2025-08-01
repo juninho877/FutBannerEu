@@ -62,6 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         
         if ($result['success']) {
             $_SESSION['credit_payment_qr_code'] = $result['qr_code'];
+            $_SESSION['credit_payment_pix_code'] = $result['pix_code'];
             $_SESSION['credit_payment_id'] = $result['payment_id'];
             $_SESSION['credit_payment_created_at'] = time();
             $_SESSION['credit_payment_amount'] = $totalAmount;
