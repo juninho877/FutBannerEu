@@ -33,6 +33,7 @@ if ($paymentCreatedAt && (time() - $paymentCreatedAt > 1800)) { // 30 minutos em
     $qrCodeExpired = true;
     // Limpar dados do pagamento expirado
     unset($_SESSION['credit_payment_qr_code']);
+    unset($_SESSION['credit_payment_pix_code']);
     unset($_SESSION['credit_payment_created_at']);
     unset($_SESSION['credit_payment_id']);
     unset($_SESSION['credit_payment_amount']);
@@ -75,6 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     } elseif ($_POST['action'] === 'cancel_payment') {
         // Limpar dados do pagamento
         unset($_SESSION['credit_payment_qr_code']);
+        unset($_SESSION['credit_payment_pix_code']);
         unset($_SESSION['credit_payment_created_at']);
         unset($_SESSION['credit_payment_id']);
         unset($_SESSION['credit_payment_amount']);
