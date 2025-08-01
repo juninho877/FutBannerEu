@@ -878,6 +878,25 @@ include "includes/header.php";
     [data-theme="dark"] .icon-suggestion.selected span {
         color: var(--primary-400);
     }
+    
+    /* Dark theme for PIX code section */
+    [data-theme="dark"] .pix-code-input {
+        background: var(--bg-secondary);
+        border-color: var(--border-color);
+        color: var(--text-primary);
+    }
+    
+    [data-theme="dark"] .copy-pix-btn {
+        background: var(--success-500);
+    }
+    
+    [data-theme="dark"] .copy-pix-btn:hover {
+        background: var(--success-600);
+    }
+    
+    [data-theme="dark"] .copy-pix-btn.copied {
+        background: var(--primary-400);
+    }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -1169,6 +1188,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     <?php endif; ?>
 });
+
+function resetForm() {
+    document.getElementById('settingsForm').reset();
+    document.getElementById('passwordStrength').style.display = 'none';
+    document.getElementById('passwordMatch').style.display = 'none';
+}
 
 function resetForm() {
     document.getElementById('settingsForm').reset();
