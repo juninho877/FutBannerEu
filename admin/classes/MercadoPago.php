@@ -218,7 +218,7 @@ class MercadoPago {
             $result = [
                 'success' => true,
                 'payment_id' => $payment['id'],
-                'qr_code_image' => $qrCode,
+                'qr_code' => $qrCode,
                 'pix_code' => $pixCode,
                 'amount' => $amount
             ];
