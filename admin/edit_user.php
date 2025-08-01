@@ -172,6 +172,7 @@ include "includes/header.php";
                             </label>
                             <select id="status" name="status" class="form-input form-select" required>
                                 <option value="active" <?php echo ($_POST['status'] ?? $userData['status']) === 'active' ? 'selected' : ''; ?>>Ativo</option>
+                                <option value="trial" <?php echo ($_POST['status'] ?? $userData['status']) === 'trial' ? 'selected' : ''; ?>>Em Teste</option>
                                 <option value="inactive" <?php echo ($_POST['status'] ?? $userData['status']) === 'inactive' ? 'selected' : ''; ?>>Inativo</option>
                             </select>
                         </div>
@@ -242,7 +243,21 @@ include "includes/header.php";
                     <div class="flex justify-between">
                         <span class="text-muted">Status:</span>
                         <span class="status-badge status-<?php echo $userData['status']; ?>">
-                            <?php echo $userData['status'] === 'active' ? 'Ativo' : 'Inativo'; ?>
+                            <?php 
+                            switch ($userData['status']) {
+                                case 'active':
+                                    echo 'Ativo';
+                                    break;
+                                case 'trial':
+                                    echo 'Em Teste';
+                                    break;
+                                case 'inactive':
+                                    echo 'Inativo';
+                                    break;
+                                default:
+                                    echo ucfirst($userData['status']);
+                            }
+                            ?>
                         </span>
                     </div>
                     <div class="flex justify-between">
@@ -403,8 +418,8 @@ include "includes/header.php";
     }
 
     .status-trial {
-        background: var(--primary-50);
-        color: var(--primary-600);
+        background: var(--info-50);
+        color: var(--info-600);
     }
 
     .border-warning-200 {
@@ -457,7 +472,7 @@ include "includes/header.php";
     
     [data-theme="dark"] .status-trial {
         background: rgba(59, 130, 246, 0.1);
-        color: var(--primary-400);
+        color: var(--info-400);
     }
 
     [data-theme="dark"] .status-trial {
