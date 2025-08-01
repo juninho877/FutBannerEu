@@ -1,0 +1,5 @@
+# Proteger diretório de logs
+<Files *>
+    Order deny,allow
+    Deny from all
+</Files>

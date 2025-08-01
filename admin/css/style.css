@@ -1,0 +1,58 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #fff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.header h1 {
+    text-align: center;
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+}
+
+.movie-details {
+    display: flex;
+    flex-wrap: wrap;
+    margin-top: 20px;
+}
+
+.poster {
+    flex: 1;
+    padding: 10px;
+    text-align: center;
+}
+
+.poster img {
+    width: 100%;
+    max-width: 300px;
+    height: auto;
+    border-radius: 8px;
+}
+
+.description {
+    flex: 2;
+    padding: 10px;
+}
+
+.actors {
+    margin-top: 40px;
+    text-align: center;
+}
+
+.actor-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.actor {
+    margin: 10
