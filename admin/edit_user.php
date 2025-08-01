@@ -402,6 +402,11 @@ include "includes/header.php";
         color: var(--danger-600);
     }
 
+    .status-trial {
+        background: var(--primary-50);
+        color: var(--primary-600);
+    }
+
     .border-warning-200 {
         border-color: rgba(245, 158, 11, 0.3);
     }
@@ -450,6 +455,11 @@ include "includes/header.php";
         color: var(--danger-400);
     }
     
+    [data-theme="dark"] .status-trial {
+        background: rgba(59, 130, 246, 0.1);
+        color: var(--primary-400);
+    }
+
     [data-theme="dark"] .status-trial {
         background: rgba(59, 130, 246, 0.1);
         color: var(--info-400);

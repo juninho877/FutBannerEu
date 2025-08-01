@@ -208,12 +208,20 @@ include "includes/header.php";
             </div>
             <div class="card-body">
                 <div class="subscription-info">
-                    <div class="subscription-status <?php echo $isExpired ? 'expired' : 'active'; ?>">
+                    <div class="subscription-status <?php echo $isExpired ? 'expired' : ($userData['status'] === 'trial' ? 'trial' : 'active'); ?>">
                         <div class="status-icon">
-                            <i class="fas fa-<?php echo $isExpired ? 'times' : 'check'; ?>"></i>
+                            <i class="fas fa-<?php echo $isExpired ? 'times' : ($userData['status'] === 'trial' ? 'gift' : 'check'); ?>"></i>
                         </div>
                         <div class="status-text">
-                            <h4><?php echo $isExpired ? 'Assinatura Expirada' : 'Assinatura Ativa'; ?></h4>
+                            <h4>
+                                <?php 
+                                if ($isExpired) {
+                                    echo $userData['status'] === 'trial' ? 'Teste Expirado' : 'Assinatura Expirada';
+                                } else {
+                                    echo $userData['status'] === 'trial' ? 'Assinatura Teste' : 'Assinatura Ativa';
+                                }
+                                ?>
+                            </h4>
                             <p>
                                 <?php 
                                 if ($isExpired) {
@@ -242,12 +250,20 @@ include "includes/header.php";
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">Plano:</span>
-                            <span class="detail-value">Acesso Premium</span>
+                            <span class="detail-value">
+                                <?php echo $userData['status'] === 'trial' ? 'Assinatura Teste' : 'Acesso Premium'; ?>
+                            </span>
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">Status:</span>
                             <span class="detail-value <?php echo $isExpired ? 'text-danger-500' : 'text-success-500'; ?>">
-                                <?php echo $isExpired ? 'Expirado' : 'Ativo'; ?>
+                                <?php 
+                                if ($isExpired) {
+                                    echo $userData['status'] === 'trial' ? 'Teste Expirado' : 'Expirado';
+                                } else {
+                                    echo $userData['status'] === 'trial' ? 'Em Teste' : 'Ativo';
+                                }
+                                ?>
                             </span>
                         </div>
                         <?php if (!empty($userData['last_login'])): ?>
@@ -530,6 +546,10 @@ include "includes/header.php";
         background: var(--danger-50);
     }
     
+    .subscription-status.trial {
+        background: var(--primary-50);
+    }
+    
     .status-icon {
         width: 48px;
         height: 48px;
@@ -550,6 +570,11 @@ include "includes/header.php";
         color: white;
     }
     
+    .subscription-status.trial .status-icon {
+        background: var(--primary-500);
+        color: white;
+    }
+    
     .status-text h4 {
         font-size: 1.25rem;
         font-weight: 600;
@@ -562,6 +587,10 @@ include "includes/header.php";
     
     .subscription-status.expired .status-text h4 {
         color: var(--danger-700);
+    }
+    
+    .subscription-status.trial .status-text h4 {
+        color: var(--primary-700);
     }
     
     .status-text p {
@@ -862,12 +891,20 @@ include "includes/header.php";
         background: rgba(239, 68, 68, 0.1);
     }
     
+    [data-theme="dark"] .subscription-status.trial {
+        background: rgba(59, 130, 246, 0.1);
+    }
+    
     [data-theme="dark"] .subscription-status.active .status-text h4 {
         color: var(--success-400);
     }
     
     [data-theme="dark"] .subscription-status.expired .status-text h4 {
         color: var(--danger-400);
+    }
+    
+    [data-theme="dark"] .subscription-status.trial .status-text h4 {
+        color: var(--primary-400);
     }
     
     [data-theme="dark"] .payment-method.active {
