@@ -225,6 +225,152 @@ include "includes/header.php";
                 <?php endif; ?>
             </div>
         </div>
+        
+        <!-- System Icon Settings -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-icons text-primary-500 mr-2"></i>
+                    Ícone do Sistema
+                </h3>
+                <p class="card-subtitle">Personalize o ícone que aparece no sistema</p>
+            </div>
+            <div class="card-body">
+                <!-- Preview do Ícone Atual -->
+                <div class="icon-preview-section mb-6">
+                    <label class="form-label">Ícone Atual:</label>
+                    <div class="icon-preview">
+                        <div class="icon-display">
+                            <i class="<?php echo htmlspecialchars($systemSettings->getSetting('system_icon', 'fas fa-futbol')); ?> text-4xl text-primary-500"></i>
+                        </div>
+                        <div class="icon-info">
+                            <p class="text-sm text-muted">
+                                Classe atual: <code><?php echo htmlspecialchars($systemSettings->getSetting('system_icon', 'fas fa-futbol')); ?></code>
+                                <?php 
+                                $iconUpdatedAt = $systemSettings->getSetting('system_icon_updated_at');
+                                if ($iconUpdatedAt) {
+                                    echo '<br><span class="text-xs">Atualizado em: ' . date('d/m/Y H:i', strtotime($iconUpdatedAt)) . '</span>';
+                                }
+                                ?>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Icon Selection Form -->
+                <form method="POST" id="iconForm">
+                    <input type="hidden" name="action" value="update_icon">
+                    
+                    <div class="form-group">
+                        <label for="system_icon" class="form-label">
+                            <i class="fas fa-code mr-2"></i>
+                            Classe do Ícone (Font Awesome)
+                        </label>
+                        <input type="text" id="system_icon" name="system_icon" class="form-input" 
+                               value="<?php echo htmlspecialchars($systemSettings->getSetting('system_icon', 'fas fa-futbol')); ?>" 
+                               placeholder="fas fa-futbol">
+                        <p class="text-xs text-muted mt-1">
+                            Use classes do Font Awesome 6. Exemplos: fas fa-futbol, fas fa-star, fas fa-crown, etc.
+                        </p>
+                    </div>
+                    
+                    <!-- Icon Suggestions -->
+                    <div class="icon-suggestions mb-4">
+                        <label class="form-label">Sugestões Populares:</label>
+                        <div class="icon-grid">
+                            <button type="button" class="icon-suggestion" data-icon="fas fa-futbol" title="Futebol">
+                                <i class="fas fa-futbol"></i>
+                                <span>Futebol</span>
+                            </button>
+                            <button type="button" class="icon-suggestion" data-icon="fas fa-star" title="Estrela">
+                                <i class="fas fa-star"></i>
+                                <span>Estrela</span>
+                            </button>
+                            <button type="button" class="icon-suggestion" data-icon="fas fa-crown" title="Coroa">
+                                <i class="fas fa-crown"></i>
+                                <span>Coroa</span>
+                            </button>
+                            <button type="button" class="icon-suggestion" data-icon="fas fa-trophy" title="Troféu">
+                                <i class="fas fa-trophy"></i>
+                                <span>Troféu</span>
+                            </button>
+                            <button type="button" class="icon-suggestion" data-icon="fas fa-film" title="Filme">
+                                <i class="fas fa-film"></i>
+                                <span>Filme</span>
+                            </button>
+                            <button type="button" class="icon-suggestion" data-icon="fas fa-magic" title="Mágica">
+                                <i class="fas fa-magic"></i>
+                                <span>Mágica</span>
+                            </button>
+                            <button type="button" class="icon-suggestion" data-icon="fas fa-rocket" title="Foguete">
+                                <i class="fas fa-rocket"></i>
+                                <span>Foguete</span>
+                            </button>
+                            <button type="button" class="icon-suggestion" data-icon="fas fa-bolt" title="Raio">
+                                <i class="fas fa-bolt"></i>
+                                <span>Raio</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i>
+                            Salvar Ícone
+                        </button>
+                        
+                        <button type="button" class="btn btn-secondary" id="restoreIconBtn">
+                            <i class="fas fa-undo"></i>
+                            Restaurar Padrão
+                        </button>
+                        
+                        <button type="button" class="btn btn-info" id="previewIconBtn">
+                            <i class="fas fa-eye"></i>
+                            Preview
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Icon Guidelines -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">📋 Diretrizes para Ícones</h3>
+            </div>
+            <div class="card-body">
+                <div class="space-y-3 text-sm">
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-check-circle text-success-500 mt-0.5"></i>
+                        <div>
+                            <p class="font-medium">Use Font Awesome 6</p>
+                            <p class="text-muted">Classes como fas, far, fab seguidas do nome do ícone</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-check-circle text-success-500 mt-0.5"></i>
+                        <div>
+                            <p class="font-medium">Formato correto</p>
+                            <p class="text-muted">Exemplo: "fas fa-futbol" ou "fas fa-star"</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-check-circle text-success-500 mt-0.5"></i>
+                        <div>
+                            <p class="font-medium">Teste antes de salvar</p>
+                            <p class="text-muted">Use o botão "Preview" para ver como ficará</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-info-circle text-primary-500 mt-0.5"></i>
+                        <div>
+                            <p class="font-medium">Aplicação automática</p>
+                            <p class="text-muted">O ícone será aplicado em todo o sistema automaticamente</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     
     <?php if ($isAdmin): ?>
