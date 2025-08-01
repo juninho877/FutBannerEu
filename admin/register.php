@@ -29,6 +29,17 @@ $referralCode = isset($_GET['ref']) ? trim($_GET['ref']) : null;
 $referralUser = null;
 $referralUserData = null;
 
+// Verificar se já existe um código de referência na sessão (memória de referência)
+if (isset($_SESSION['referral_code']) && !empty($_SESSION['referral_code'])) {
+    $referralCode = $_SESSION['referral_code'];
+}
+
+// Se há um novo código de referência na URL, armazenar na sessão
+if (isset($_GET['ref']) && !empty(trim($_GET['ref']))) {
+    $_SESSION['referral_code'] = trim($_GET['ref']);
+    $referralCode = $_SESSION['referral_code'];
+}
+
 if ($referralCode) {
     // Buscar o usuário master pelo código de referência (usando o ID como código)
     $stmt = $db->getConnection()->prepare("
@@ -44,7 +55,7 @@ if ($referralCode) {
     }
 }
 
-// Se não há referência válida, usar o admin (ID 1) como padrão
+// Se não há referência válida ou o usuário não foi encontrado, usar o admin (ID 1) como padrão
 if (!$referralUser) {
     $referralUser = 1; // Admin ID
     
@@ -52,10 +63,19 @@ if (!$referralUser) {
     $stmt = $db->getConnection()->prepare("
         SELECT id, username, role 
         FROM usuarios 
-        WHERE id = 1 AND role = 'admin'
+        WHERE id = 1
     ");
     $stmt->execute();
     $referralUserData = $stmt->fetch();
+    
+    // Se o admin não existe, criar dados padrão para exibição
+    if (!$referralUserData) {
+        $referralUserData = [
+            'id' => 1,
+            'username' => 'Administração',
+            'role' => 'admin'
+        ];
+    }
 }
 
 // Obter configurações de teste grátis
@@ -101,6 +121,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $messageType = $result['success'] ? 'success' : 'error';
         
         if ($result['success']) {
+            // Limpar código de referência da sessão após cadastro bem-sucedido
+            unset($_SESSION['referral_code']);
+            
             // Redirecionar para login com mensagem de sucesso
             $_SESSION['registration_success'] = true;
             $_SESSION['registration_message'] = "Conta criada com sucesso! Você tem {$trialDurationDays} dias de teste grátis. Faça login para começar.";

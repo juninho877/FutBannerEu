@@ -125,7 +125,7 @@ class User {
             
             // Se for um usuário criado por um master, verificar se o master tem créditos suficientes
             $parentUserId = $data['parent_user_id'] ?? null;
-            if ($parentUserId && $data['role'] === 'user') {
+            if ($parentUserId && $parentUserId != 1 && $data['role'] === 'user') {
                 // Verificar se o parent_user_id existe e é um master
                 $stmt = $this->db->prepare("SELECT id, role, credits FROM usuarios WHERE id = ? AND role = 'master'");
                 $stmt->execute([$parentUserId]);
