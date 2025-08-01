@@ -44,6 +44,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && $currentUserData) {
         $result = $systemSettings->restoreDefaultFavicon();
         $mensagem = $result['message'];
         $tipoMensagem = $result['success'] ? 'success' : 'error';
+    } elseif ($isAdmin && isset($_POST['action']) && $_POST['action'] === 'upload_logo') {
+        if (isset($_FILES['system_logo']) && $_FILES['system_logo']['error'] === 0) {
+            $result = $systemSettings->saveSystemLogo($_FILES['system_logo']);
+            $mensagem = $result['message'];
+            $tipoMensagem = $result['success'] ? 'success' : 'error';
+        } else {
+            $mensagem = "Nenhum arquivo foi enviado ou ocorreu um erro no upload.";
+            $tipoMensagem = "error";
+        }
+    } elseif ($isAdmin && isset($_POST['action']) && $_POST['action'] === 'restore_logo') {
+        $result = $systemSettings->restoreDefaultSystemLogo();
+        $mensagem = $result['message'];
+        $tipoMensagem = $result['success'] ? 'success' : 'error';
     } else {
         // Lógica original de alteração de usuário
         $novo_usuario = trim($_POST["novo_usuario"]);
@@ -104,19 +117,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && $currentUserData) {
                 $mensagem = "Erro ao verificar senha: " . $e->getMessage();
                 $tipoMensagem = "error";
             }
-        } elseif (isset($_POST['action']) && $_POST['action'] === 'upload_logo') {
-            if (isset($_FILES['system_logo']) && $_FILES['system_logo']['error'] === 0) {
-                $result = $systemSettings->saveSystemLogo($_FILES['system_logo']);
-                $mensagem = $result['message'];
-                $tipoMensagem = $result['success'] ? 'success' : 'error';
-            } else {
-                $mensagem = "Nenhum arquivo foi enviado ou ocorreu um erro no upload.";
-                $tipoMensagem = "error";
-            }
-        } elseif (isset($_POST['action']) && $_POST['action'] === 'restore_logo') {
-            $result = $systemSettings->restoreDefaultSystemLogo();
-            $mensagem = $result['message'];
-            $tipoMensagem = $result['success'] ? 'success' : 'error';
         }
     }
 }
