@@ -14,7 +14,7 @@ class User {
         $stmt = $this->db->prepare("
             SELECT id, username, password, role, status, expires_at 
             FROM usuarios 
-            WHERE username = ? AND status = 'active'
+            WHERE username = ? AND status IN ('active', 'trial')
         ");
         $stmt->execute([$username]);
         $user = $stmt->fetch();
@@ -119,7 +119,7 @@ class User {
                 $trialDays = intval($data['trial_duration_days']);
                 if ($trialDays > 0) {
                     $data['expires_at'] = date('Y-m-d', strtotime("+{$trialDays} days"));
-                    $data['status'] = 'active'; // Garantir que o usuário esteja ativo durante o teste
+                    $data['status'] = 'trial'; // Marcar como usuário em teste
                 }
             }
             
@@ -319,6 +319,7 @@ class User {
             SELECT 
                 COUNT(*) as total,
                 SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active,
+                SUM(CASE WHEN status = 'trial' THEN 1 ELSE 0 END) as trial,
                 SUM(CASE WHEN status = 'inactive' THEN 1 ELSE 0 END) as inactive,
                 SUM(CASE WHEN role = 'admin' THEN 1 ELSE 0 END) as admins,
                 SUM(CASE WHEN role = 'master' THEN 1 ELSE 0 END) as masters,

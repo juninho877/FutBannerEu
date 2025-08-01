@@ -107,11 +107,11 @@ include "includes/header.php";
         <div class="card-body">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm font-medium text-muted">Usuários Inativos</p>
-                    <p class="text-2xl font-bold text-danger-500"><?php echo $stats['inactive']; ?></p>
+                    <p class="text-sm font-medium text-muted">Usuários em Teste</p>
+                    <p class="text-2xl font-bold text-info-500"><?php echo $stats['trial']; ?></p>
                 </div>
-                <div class="w-12 h-12 bg-danger-50 rounded-lg flex items-center justify-center">
-                    <i class="fas fa-user-times text-danger-500"></i>
+                <div class="w-12 h-12 bg-info-50 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-user-clock text-info-500"></i>
                 </div>
             </div>
         </div>
@@ -121,11 +121,25 @@ include "includes/header.php";
         <div class="card-body">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm font-medium text-muted">Masters</p>
-                    <p class="text-2xl font-bold text-warning-500"><?php echo $stats['masters']; ?></p>
+                    <p class="text-sm font-medium text-muted">Usuários Inativos</p>
+                    <p class="text-2xl font-bold text-warning-500"><?php echo $stats['inactive']; ?></p>
                 </div>
                 <div class="w-12 h-12 bg-warning-50 rounded-lg flex items-center justify-center">
-                    <i class="fas fa-user-shield text-warning-500"></i>
+                    <i class="fas fa-user-times text-warning-500"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-muted">Usuários Expirados</p>
+                    <p class="text-2xl font-bold text-danger-500"><?php echo $stats['expired']; ?></p>
+                </div>
+                <div class="w-12 h-12 bg-danger-50 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-user-slash text-danger-500"></i>
                 </div>
             </div>
         </div>
@@ -162,6 +176,7 @@ include "includes/header.php";
                 <select id="status" name="status" class="form-input form-select">
                     <option value="all" <?php echo $filters['status'] === 'all' ? 'selected' : ''; ?>>Todos os status</option>
                     <option value="active" <?php echo $filters['status'] === 'active' ? 'selected' : ''; ?>>Ativo</option>
+                    <option value="trial" <?php echo $filters['status'] === 'trial' ? 'selected' : ''; ?>>Em Teste</option>
                     <option value="inactive" <?php echo $filters['status'] === 'inactive' ? 'selected' : ''; ?>>Inativo</option>
                     <option value="expired" <?php echo $filters['status'] === 'expired' ? 'selected' : ''; ?>>Expirado</option>
                 </select>
@@ -227,6 +242,7 @@ include "includes/header.php";
                         <?php foreach ($users as $userData): 
                             // Verificar se o usuário está expirado
                             $isExpired = $userData['expires_at'] && strtotime($userData['expires_at']) < time();
+                            $isTrialExpired = $userData['status'] === 'trial' && $isExpired;
                         ?>
                             <tr data-user-id="<?php echo $userData['id']; ?>">
                                 <td><?php echo $userData['id']; ?></td>
@@ -256,8 +272,12 @@ include "includes/header.php";
                                     </span>
                                 </td>
                                 <td>
-                                    <?php if ($isExpired): ?>
+                                    <?php if ($isTrialExpired): ?>
+                                        <span class="status-badge status-trial-expired">Teste Expirado</span>
+                                    <?php elseif ($isExpired): ?>
                                         <span class="status-badge status-expired">Expirado</span>
+                                    <?php elseif ($userData['status'] === 'trial'): ?>
+                                        <span class="status-badge status-trial">Em Teste</span>
                                     <?php else: ?>
                                         <span class="status-badge status-<?php echo $userData['status']; ?>">
                                             <?php echo $userData['status'] === 'active' ? 'Ativo' : 'Inativo'; ?>
@@ -423,6 +443,24 @@ include "includes/header.php";
         background: var(--warning-50);
         color: var(--warning-600);
     }
+    
+    .status-trial {
+        background: var(--info-50);
+        color: var(--info-600);
+    }
+    
+    .status-trial-expired {
+        background: var(--danger-50);
+        color: var(--danger-600);
+    }
+    
+    .text-info-500 {
+        color: var(--info-500);
+    }
+    
+    .bg-info-50 {
+        background-color: var(--info-50);
+    }
 
     .action-buttons {
         display: flex;
@@ -532,6 +570,16 @@ include "includes/header.php";
     [data-theme="dark"] .status-expired {
         background: rgba(245, 158, 11, 0.1);
         color: var(--warning-400);
+    }
+    
+    [data-theme="dark"] .status-trial {
+        background: rgba(59, 130, 246, 0.1);
+        color: var(--info-400);
+    }
+    
+    [data-theme="dark"] .status-trial-expired {
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--danger-400);
     }
     
     [data-theme="dark"] .btn-primary {

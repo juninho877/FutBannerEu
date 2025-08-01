@@ -87,7 +87,7 @@ include "includes/header.php";
                     <p class="text-2xl font-bold text-info-500">
                         <?php 
                         $activeUsers = array_filter($users, function($user) {
-                            return $user['status'] === 'active' && (!$user['expires_at'] || $user['expires_at'] >= date('Y-m-d'));
+                            return ($user['status'] === 'active' || $user['status'] === 'trial') && (!$user['expires_at'] || $user['expires_at'] >= date('Y-m-d'));
                         });
                         echo count($activeUsers);
                         ?>
@@ -208,6 +208,7 @@ include "includes/header.php";
                         <?php foreach ($users as $userData): 
                             // Verificar se o usuário está expirado
                             $isExpired = $userData['expires_at'] && strtotime($userData['expires_at']) < time();
+                            $isTrialExpired = $userData['status'] === 'trial' && $isExpired;
                         ?>
                             <tr data-user-id="<?php echo $userData['id']; ?>">
                                 <td><?php echo $userData['id']; ?></td>
@@ -221,8 +222,12 @@ include "includes/header.php";
                                 </td>
                                 <td><?php echo htmlspecialchars($userData['email'] ?? '-'); ?></td>
                                 <td>
-                                    <?php if ($isExpired): ?>
+                                    <?php if ($isTrialExpired): ?>
+                                        <span class="status-badge status-trial-expired">Teste Expirado</span>
+                                    <?php elseif ($isExpired): ?>
                                         <span class="status-badge status-expired">Expirado</span>
+                                    <?php elseif ($userData['status'] === 'trial'): ?>
+                                        <span class="status-badge status-trial">Em Teste</span>
                                     <?php else: ?>
                                         <span class="status-badge status-<?php echo $userData['status']; ?>">
                                             <?php echo $userData['status'] === 'active' ? 'Ativo' : 'Inativo'; ?>
@@ -355,6 +360,16 @@ include "includes/header.php";
         background: var(--warning-50);
         color: var(--warning-600);
     }
+    
+    .status-trial {
+        background: var(--info-50);
+        color: var(--info-600);
+    }
+    
+    .status-trial-expired {
+        background: var(--danger-50);
+        color: var(--danger-600);
+    }
 
     .action-buttons {
         display: flex;
@@ -453,6 +468,16 @@ include "includes/header.php";
     [data-theme="dark"] .status-expired {
         background: rgba(245, 158, 11, 0.1);
         color: var(--warning-400);
+    }
+    
+    [data-theme="dark"] .status-trial {
+        background: rgba(59, 130, 246, 0.1);
+        color: var(--info-400);
+    }
+    
+    [data-theme="dark"] .status-trial-expired {
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--danger-400);
     }
     
     [data-theme="dark"] .btn-primary {

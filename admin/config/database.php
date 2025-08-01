@@ -46,7 +46,7 @@ class Database {
             password VARCHAR(255) NOT NULL,
             email VARCHAR(100) UNIQUE,
             role ENUM('admin', 'master', 'user') DEFAULT 'user',
-            status ENUM('active', 'inactive') DEFAULT 'active',
+            status ENUM('active', 'inactive', 'trial') DEFAULT 'active',
             expires_at DATE NULL,
             credits INT DEFAULT 0,
             parent_user_id INT NULL,
@@ -282,6 +282,23 @@ class Database {
                 $this->connection->exec("
                     ALTER TABLE usuarios 
                     MODIFY COLUMN role ENUM('admin', 'master', 'user') DEFAULT 'user'
+                ");
+            }
+            
+            // Verificar se o valor 'trial' existe no ENUM status
+            $stmt = $this->connection->prepare("
+                SELECT COLUMN_TYPE 
+                FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'usuarios' AND COLUMN_NAME = 'status'
+            ");
+            $stmt->execute([$this->dbname]);
+            $result = $stmt->fetch();
+            
+            if ($result && strpos($result['COLUMN_TYPE'], 'trial') === false) {
+                // Adicionar 'trial' ao ENUM status
+                $this->connection->exec("
+                    ALTER TABLE usuarios 
+                    MODIFY COLUMN status ENUM('active', 'inactive', 'trial') DEFAULT 'active'
                 ");
             }
             
