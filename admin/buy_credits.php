@@ -174,6 +174,29 @@ include "includes/header.php";
                         <img src="<?php echo $_SESSION['credit_payment_qr_code']; ?>" alt="QR Code de Pagamento">
                     </div>
                     <div class="qr-code-info">
+                        <!-- PIX Copy-Paste Code Section -->
+                        <?php if (isset($_SESSION['credit_payment_pix_code']) && !empty($_SESSION['credit_payment_pix_code'])): ?>
+                        <div class="pix-code-section">
+                            <label class="pix-code-label">
+                                <i class="fas fa-copy"></i>
+                                Código PIX (Copia e Cola):
+                            </label>
+                            <div class="pix-code-container">
+                                <input type="text" id="pixCode" class="pix-code-input" 
+                                       value="<?php echo htmlspecialchars($_SESSION['credit_payment_pix_code']); ?>" 
+                                       readonly onclick="this.select()">
+                                <button type="button" id="copyPixBtn" class="copy-pix-btn">
+                                    <i class="fas fa-copy"></i>
+                                    Copiar
+                                </button>
+                            </div>
+                            <p class="pix-code-help">
+                                <i class="fas fa-info-circle"></i>
+                                Copie este código e cole no seu app bancário para pagar via PIX
+                            </p>
+                        </div>
+                        <?php endif; ?>
+                        
                         <p class="qr-code-amount">R$ <?php echo number_format($_SESSION['credit_payment_amount'] ?? 0, 2, ',', '.'); ?></p>
                         <p class="qr-code-description">
                             <?php echo $_SESSION['credit_payment_credits'] ?? 1; ?> créditos
@@ -595,6 +618,98 @@ include "includes/header.php";
         gap: 0.5rem;
     }
     
+    /* PIX Code Section Styles */
+    .pix-code-section {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .pix-code-label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.75rem;
+        font-size: 0.875rem;
+    }
+    
+    .pix-code-container {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .pix-code-input {
+        flex: 1;
+        padding: 0.75rem;
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-sm);
+        font-family: monospace;
+        font-size: 0.75rem;
+        color: var(--text-primary);
+        cursor: pointer;
+        word-break: break-all;
+    }
+    
+    .pix-code-input:focus {
+        outline: none;
+        border-color: var(--primary-500);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .copy-pix-btn {
+        background: var(--success-500);
+        color: white;
+        border: none;
+        padding: 0.75rem 1rem;
+        border-radius: var(--border-radius-sm);
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.75rem;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        white-space: nowrap;
+    }
+    
+    .copy-pix-btn:hover {
+        background: var(--success-600);
+        transform: translateY(-1px);
+    }
+    
+    .copy-pix-btn:active {
+        transform: translateY(0);
+    }
+    
+    .copy-pix-btn.copied {
+        background: var(--primary-500);
+        animation: pulse 0.6s ease-in-out;
+    }
+    
+    .pix-code-help {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0;
+    }
+    
+    @keyframes pulse {
+        0%, 100% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.05);
+        }
+    }
+    
     .qr-code-actions {
         display: flex;
         gap: 1rem;
@@ -749,6 +864,25 @@ include "includes/header.php";
     
     [data-theme="dark"] .qr-code-expiry {
         color: var(--warning-400);
+    }
+    
+    /* Dark theme for PIX code section */
+    [data-theme="dark"] .pix-code-input {
+        background: var(--bg-secondary);
+        border-color: var(--border-color);
+        color: var(--text-primary);
+    }
+    
+    [data-theme="dark"] .copy-pix-btn {
+        background: var(--success-500);
+    }
+    
+    [data-theme="dark"] .copy-pix-btn:hover {
+        background: var(--success-600);
+    }
+    
+    [data-theme="dark"] .copy-pix-btn.copied {
+        background: var(--primary-400);
     }
 </style>
 
@@ -930,6 +1064,77 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.disabled = false;
                 this.innerHTML = '<i class="fas fa-sync-alt"></i> Verificar Pagamento';
             });
+        });
+    }
+    
+    // PIX Code Copy Functionality
+    const copyPixBtn = document.getElementById('copyPixBtn');
+    const pixCodeInput = document.getElementById('pixCode');
+    
+    if (copyPixBtn && pixCodeInput) {
+        copyPixBtn.addEventListener('click', function() {
+            const pixCode = pixCodeInput.value;
+            
+            // Try modern clipboard API first
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(pixCode).then(() => {
+                    showCopySuccess();
+                }).catch(() => {
+                    fallbackCopy();
+                });
+            } else {
+                fallbackCopy();
+            }
+            
+            function fallbackCopy() {
+                try {
+                    pixCodeInput.select();
+                    pixCodeInput.setSelectionRange(0, 99999); // For mobile devices
+                    document.execCommand('copy');
+                    showCopySuccess();
+                } catch (err) {
+                    showCopyError();
+                }
+            }
+            
+            function showCopySuccess() {
+                // Visual feedback
+                copyPixBtn.classList.add('copied');
+                const originalText = copyPixBtn.innerHTML;
+                copyPixBtn.innerHTML = '<i class="fas fa-check"></i> Copiado!';
+                
+                // Reset after 2 seconds
+                setTimeout(() => {
+                    copyPixBtn.classList.remove('copied');
+                    copyPixBtn.innerHTML = originalText;
+                }, 2000);
+                
+                // Show success notification
+                Swal.fire({
+                    title: 'Código Copiado!',
+                    text: 'O código PIX foi copiado para sua área de transferência',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                    background: document.body.getAttribute('data-theme') === 'dark' ? '#1e293b' : '#ffffff',
+                    color: document.body.getAttribute('data-theme') === 'dark' ? '#f1f5f9' : '#1e293b'
+                });
+            }
+            
+            function showCopyError() {
+                Swal.fire({
+                    title: 'Erro ao Copiar',
+                    text: 'Não foi possível copiar automaticamente. Selecione o texto e copie manualmente.',
+                    icon: 'error',
+                    background: document.body.getAttribute('data-theme') === 'dark' ? '#1e293b' : '#ffffff',
+                    color: document.body.getAttribute('data-theme') === 'dark' ? '#f1f5f9' : '#1e293b'
+                });
+            }
+        });
+        
+        // Auto-select text when clicking on input
+        pixCodeInput.addEventListener('click', function() {
+            this.select();
         });
     }
     
