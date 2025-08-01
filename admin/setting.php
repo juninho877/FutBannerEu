@@ -239,6 +239,7 @@ include "includes/header.php";
             </div>
         </div>
         
+        <?php if ($isAdmin): ?>
         <!-- System Logo Settings -->
         <div class="card">
             <div class="card-header">
@@ -351,9 +352,9 @@ include "includes/header.php";
                 </div>
             </div>
         </div>
+        <?php endif; ?>
     </div>
     
-    <?php if ($isAdmin): ?>
     <?php if ($isAdmin): ?>
     <!-- Admin Settings -->
     <div class="space-y-6">
@@ -760,142 +761,9 @@ include "includes/header.php";
         border-color: var(--border-color);
     }
     
-    /* Icon Management Styles */
-    .icon-preview-section {
-        background: var(--bg-secondary);
-        border-radius: var(--border-radius);
-        padding: 1rem;
-    }
-    
-    .icon-preview {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        margin-top: 0.5rem;
-    }
-    
-    .icon-display {
-        width: 80px;
-        height: 80px;
-        border-radius: var(--border-radius);
-        border: 1px solid var(--border-color);
-        background: var(--bg-primary);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    
-    .icon-info {
-        flex: 1;
-    }
-    
-    .icon-info code {
-        background: var(--bg-tertiary);
-        padding: 0.25rem 0.5rem;
-        border-radius: 4px;
-        font-family: monospace;
-        font-size: 0.875rem;
-    }
-    
-    .icon-suggestions {
-        margin-bottom: 1rem;
-    }
-    
-    .icon-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-        gap: 0.75rem;
-        margin-top: 0.5rem;
-    }
-    
-    .icon-suggestion {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 1rem 0.5rem;
-        background: var(--bg-secondary);
-        border: 2px solid var(--border-color);
-        border-radius: var(--border-radius);
-        cursor: pointer;
-        transition: var(--transition);
-        font-size: 0.75rem;
-        text-align: center;
-    }
-    
-    .icon-suggestion:hover {
-        border-color: var(--primary-500);
-        background: var(--primary-50);
-        transform: translateY(-2px);
-    }
-    
-    .icon-suggestion.selected {
-        border-color: var(--primary-500);
-        background: var(--primary-50);
-        box-shadow: var(--shadow-md);
-    }
-    
-    .icon-suggestion i {
-        font-size: 1.5rem;
-        color: var(--primary-500);
-    }
-    
-    .icon-suggestion span {
-        color: var(--text-secondary);
-        font-weight: 500;
-    }
-    
-    .icon-suggestion:hover span {
-        color: var(--primary-600);
-    }
-    
-    .icon-suggestion.selected span {
-        color: var(--primary-600);
-        font-weight: 600;
-    }
-    
     .text-4xl {
         font-size: 2.25rem;
         line-height: 2.5rem;
-    }
-    
-    /* Dark theme adjustments for icons */
-    [data-theme="dark"] .icon-suggestion:hover {
-        background: rgba(59, 130, 246, 0.1);
-        border-color: var(--primary-400);
-    }
-    
-    [data-theme="dark"] .icon-suggestion.selected {
-        background: rgba(59, 130, 246, 0.1);
-        border-color: var(--primary-400);
-    }
-    
-    [data-theme="dark"] .icon-suggestion i {
-        color: var(--primary-400);
-    }
-    
-    [data-theme="dark"] .icon-suggestion:hover span,
-    [data-theme="dark"] .icon-suggestion.selected span {
-        color: var(--primary-400);
-    }
-    
-    /* Dark theme for PIX code section */
-    [data-theme="dark"] .pix-code-input {
-        background: var(--bg-secondary);
-        border-color: var(--border-color);
-        color: var(--text-primary);
-    }
-    
-    [data-theme="dark"] .copy-pix-btn {
-        background: var(--success-500);
-    }
-    
-    [data-theme="dark"] .copy-pix-btn:hover {
-        background: var(--success-600);
-    }
-    
-    [data-theme="dark"] .copy-pix-btn.copied {
-        background: var(--primary-400);
     }
 </style>
 
@@ -1188,12 +1056,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     <?php endif; ?>
 });
-
-function resetForm() {
-    document.getElementById('settingsForm').reset();
-    document.getElementById('passwordStrength').style.display = 'none';
-    document.getElementById('passwordMatch').style.display = 'none';
-}
 
 function resetForm() {
     document.getElementById('settingsForm').reset();
