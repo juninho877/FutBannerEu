@@ -545,11 +545,6 @@ include "includes/header.php";
         color: var(--info-400);
     }
     
-    [data-theme="dark"] .status-trial {
-        background: rgba(59, 130, 246, 0.1);
-        color: var(--info-400);
-    }
-    
     [data-theme="dark"] .expiry-badge.active {
         background: rgba(34, 197, 94, 0.1);
         color: var(--success-400);

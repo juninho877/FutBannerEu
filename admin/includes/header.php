@@ -113,6 +113,12 @@ if ($isTempUser) {
             --warning-500: #f59e0b;
             --warning-600: #d97706;
             
+            /* Info Colors for Trial Status */
+            --info-50: #eff6ff;
+            --info-500: #3b82f6;
+            --info-600: #2563eb;
+            --info-400: #60a5fa;
+            
             /* Layout */
             --sidebar-width: 280px;
             --header-height: 70px;
