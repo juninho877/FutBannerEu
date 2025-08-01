@@ -354,6 +354,7 @@ include "includes/header.php";
     </div>
     
     <?php if ($isAdmin): ?>
+    <?php if ($isAdmin): ?>
     <!-- Admin Settings -->
     <div class="space-y-6">
         <!-- Favicon Settings -->
@@ -466,6 +467,7 @@ include "includes/header.php";
         </div>
     </div>
     <?php endif; ?>
+    <?php endif; ?>
 
     <!-- Sidebar Info -->
     <div class="space-y-6">
@@ -576,6 +578,7 @@ include "includes/header.php";
             </div>
         </div>
     </div>
+    <?php endif; ?>
 </div>
 
 <style>
