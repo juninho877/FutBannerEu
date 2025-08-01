@@ -748,10 +748,6 @@ if ($isTempUser) {
                     <?php else: ?>
                         <i class="fas fa-futbol"></i>
                     <?php endif; ?>
-                        require_once __DIR__ . '/../classes/SystemSettings.php';
-                        $systemSettings = new SystemSettings();
-                        echo htmlspecialchars($systemSettings->getSetting('system_icon', 'fas fa-futbol'));
-                    ?>"></i>
                     <span>FutBanner</span>
                 </a>
                 <button class="theme-toggle" id="themeToggle">

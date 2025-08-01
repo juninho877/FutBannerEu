@@ -697,10 +697,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php else: ?>
                     <i class="fas fa-futbol"></i>
                 <?php endif; ?>
-                    require_once 'classes/SystemSettings.php';
-                    $systemSettings = new SystemSettings();
-                    echo htmlspecialchars($systemSettings->getSetting('system_icon', 'fas fa-futbol'));
-                ?>"></i>
             </div>
             <h1 class="register-title">Criar Conta</h1>
             <p class="register-subtitle">Junte-se ao FutBanner e comece a criar banners incríveis</p>

@@ -541,10 +541,6 @@ if (isset($_SESSION['registration_success'])) {
                 <?php else: ?>
                     <i class="fas fa-futbol"></i>
                 <?php endif; ?>
-                    require_once 'classes/SystemSettings.php';
-                    $systemSettings = new SystemSettings();
-                    echo htmlspecialchars($systemSettings->getSetting('system_icon', 'fas fa-futbol'));
-                ?>"></i>
             </div>
             <h1 class="login-title">FutBanner</h1>
             <p class="login-subtitle">Sistema de Geração de Banners</p>
