@@ -6,9 +6,9 @@ class Database {
     
     // Configurações do MySQL - ALTERE ESTAS CONFIGURAÇÕES
     private $host = 'localhost';
-    private $dbname = 'streami1_gerador_banner';
-    private $username = 'streami1_gerador_banner';
-    private $password = 'LG~QKLLT+)e^1M7l';
+    private $dbname = 'admin_futbanner';
+    private $username = 'admin_futbanner';
+    private $password = 'r5mCUI&~wld4alt7';
     private $charset = 'utf8mb4';
     
     private function __construct() {
