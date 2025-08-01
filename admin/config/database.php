@@ -166,9 +166,9 @@ class Database {
             $stmt = $this->connection->prepare("
                 SELECT COUNT(*) as column_exists 
                 FROM information_schema.COLUMNS 
-                WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'mercadopago_settings' AND COLUMN_NAME = 'whatsapp_number'
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'mercadopago_settings' AND COLUMN_NAME = 'whatsapp_number'
             ");
-            $stmt->execute([$this->dbname]);
+            $stmt->execute();
             $result = $stmt->fetch();
             
             if ($result['column_exists'] == 0) {
@@ -183,9 +183,9 @@ class Database {
             $stmt = $this->connection->prepare("
                 SELECT COUNT(*) as column_exists 
                 FROM information_schema.COLUMNS 
-                WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'mercadopago_settings' AND COLUMN_NAME = 'discount_3_months_percent'
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'mercadopago_settings' AND COLUMN_NAME = 'discount_3_months_percent'
             ");
-            $stmt->execute([$this->dbname]);
+            $stmt->execute();
             $result = $stmt->fetch();
             
             if ($result['column_exists'] == 0) {
@@ -202,9 +202,9 @@ class Database {
             $stmt = $this->connection->prepare("
                 SELECT COUNT(*) as column_exists 
                 FROM information_schema.COLUMNS 
-                WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'mercadopago_settings' AND COLUMN_NAME = 'credit_price'
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'mercadopago_settings' AND COLUMN_NAME = 'credit_price'
             ");
-            $stmt->execute([$this->dbname]);
+            $stmt->execute();
             $result = $stmt->fetch();
             
             if ($result['column_exists'] == 0) {
@@ -220,9 +220,9 @@ class Database {
             $stmt = $this->connection->prepare("
                 SELECT COUNT(*) as column_exists 
                 FROM information_schema.COLUMNS 
-                WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'mercadopago_settings' AND COLUMN_NAME = 'trial_duration_days'
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'mercadopago_settings' AND COLUMN_NAME = 'trial_duration_days'
             ");
-            $stmt->execute([$this->dbname]);
+            $stmt->execute();
             $result = $stmt->fetch();
             
             if ($result['column_exists'] == 0) {
@@ -237,9 +237,9 @@ class Database {
             $stmt = $this->connection->prepare("
                 SELECT COUNT(*) as column_exists 
                 FROM information_schema.COLUMNS 
-                WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'usuarios' AND COLUMN_NAME = 'credits'
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'usuarios' AND COLUMN_NAME = 'credits'
             ");
-            $stmt->execute([$this->dbname]);
+            $stmt->execute();
             $result = $stmt->fetch();
             
             if ($result['column_exists'] == 0) {
@@ -254,9 +254,9 @@ class Database {
             $stmt = $this->connection->prepare("
                 SELECT COUNT(*) as column_exists 
                 FROM information_schema.COLUMNS 
-                WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'usuarios' AND COLUMN_NAME = 'parent_user_id'
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'usuarios' AND COLUMN_NAME = 'parent_user_id'
             ");
-            $stmt->execute([$this->dbname]);
+            $stmt->execute();
             $result = $stmt->fetch();
             
             if ($result['column_exists'] == 0) {
@@ -272,9 +272,9 @@ class Database {
             $stmt = $this->connection->prepare("
                 SELECT COLUMN_TYPE 
                 FROM information_schema.COLUMNS 
-                WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'usuarios' AND COLUMN_NAME = 'role'
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'usuarios' AND COLUMN_NAME = 'role'
             ");
-            $stmt->execute([$this->dbname]);
+            $stmt->execute();
             $result = $stmt->fetch();
             
             if ($result && strpos($result['COLUMN_TYPE'], 'master') === false) {
@@ -289,9 +289,9 @@ class Database {
             $stmt = $this->connection->prepare("
                 SELECT COLUMN_TYPE 
                 FROM information_schema.COLUMNS 
-                WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'usuarios' AND COLUMN_NAME = 'status'
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'usuarios' AND COLUMN_NAME = 'status'
             ");
-            $stmt->execute([$this->dbname]);
+            $stmt->execute();
             $result = $stmt->fetch();
             
             if ($result && strpos($result['COLUMN_TYPE'], 'trial') === false) {
@@ -306,9 +306,9 @@ class Database {
             $stmt = $this->connection->prepare("
                 SELECT COUNT(*) as table_exists 
                 FROM information_schema.TABLES 
-                WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'credit_purchases'
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'credit_purchases'
             ");
-            $stmt->execute([$this->dbname]);
+            $stmt->execute();
             $result = $stmt->fetch();
             
             if ($result['table_exists'] == 0) {
@@ -331,9 +331,9 @@ class Database {
             $stmt = $this->connection->prepare("
                 SELECT COUNT(*) as column_exists 
                 FROM information_schema.COLUMNS 
-                WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'mercadopago_payments' AND COLUMN_NAME = 'payment_purpose'
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'mercadopago_payments' AND COLUMN_NAME = 'payment_purpose'
             ");
-            $stmt->execute([$this->dbname]);
+            $stmt->execute();
             $result = $stmt->fetch();
             
             if ($result['column_exists'] == 0) {
@@ -349,9 +349,9 @@ class Database {
             $stmt = $this->connection->prepare("
                 SELECT COUNT(*) as column_exists 
                 FROM information_schema.COLUMNS 
-                WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'mercadopago_payments' AND COLUMN_NAME = 'is_processed'
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'mercadopago_payments' AND COLUMN_NAME = 'is_processed'
             ");
-            $stmt->execute([$this->dbname]);
+            $stmt->execute();
             $result = $stmt->fetch();
             
             if ($result['column_exists'] == 0) {

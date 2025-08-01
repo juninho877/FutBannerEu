@@ -60,16 +60,14 @@ $testResults[] = runTest("Estrutura do Banco de Dados", function() use ($db) {
     
     foreach ($requiredTables as $table => $columns) {
         // Verificar se a tabela existe (usando interpolação direta para o nome da tabela, pois é um identificador interno)
-        $stmt = $db->prepare("SHOW TABLES LIKE '{$table}'");
-        $stmt->execute(); // Não precisa de parâmetros para execute() quando o nome da tabela é interpolado
+        $stmt = $db->query("SHOW TABLES LIKE '{$table}'");
         if (!$stmt->fetch()) {
             $missingTables[] = $table;
             continue;
         }
         
         // Verificar colunas
-        $stmt = $db->prepare("DESCRIBE $table");
-        $stmt->execute();
+        $stmt = $db->query("DESCRIBE {$table}");
         $existingColumns = array_column($stmt->fetchAll(), 'Field');
         
         foreach ($columns as $column) {
