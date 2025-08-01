@@ -16,8 +16,8 @@ include "includes/header.php";
 
 // Gerar URLs de referência
 $baseUrl = 'https://' . $_SERVER['HTTP_HOST'] . dirname(dirname($_SERVER['REQUEST_URI']));
-$referralUrl = $baseUrl . '/admin/register.php?ref=' . $userId;
-$directUrl = $baseUrl . '/admin/register.php';
+$referralUrl = $baseUrl . 'admin/register.php?ref=' . $userId;
+$directUrl = $baseUrl . 'admin/register.php';
 ?>
 
 <div class="page-header">
