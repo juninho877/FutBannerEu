@@ -104,7 +104,8 @@ function sendWhatsAppCode($number, $code) {
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
         CURLOPT_HTTPHEADER => [
-            'Content-Type: application/json'
+            'Content-Type: application/json',
+            'x-api-key: 8350e5a3e24c153df2275c9f80692773'
         ],
         CURLOPT_POSTFIELDS => json_encode($data),
         CURLOPT_TIMEOUT => 10,
