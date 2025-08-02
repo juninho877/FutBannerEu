@@ -95,7 +95,7 @@ function sendWhatsAppCode($number, $code) {
     $data = [
         'number' => $number,
         'code' => $code,
-        'message' => "*FutBanner*\nOlá! Seu código de Validação é: *#code#*.\nNão compartilhe com ninguém."
+        'message' => "*FutBanner*\nOlá! Seu código de Validação é: #code#.\nNão compartilhe com ninguém."
     ];
     
     $ch = curl_init();
