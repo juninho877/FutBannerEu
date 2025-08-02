@@ -46,7 +46,7 @@ class User {
     // Listar todos os usuários com filtros
     public function getAllUsers($filters = []) {
         $sql = "
-            SELECT id, username, email, role, status, expires_at, credits, parent_user_id, created_at, last_login 
+            SELECT id, username, email, whatsapp, role, status, expires_at, credits, parent_user_id, created_at, last_login 
             FROM usuarios 
             WHERE 1=1
         ";
@@ -87,7 +87,7 @@ class User {
     // Buscar usuário por ID
     public function getUserById($id) {
         $stmt = $this->db->prepare("
-            SELECT id, username, email, role, status, expires_at, credits, parent_user_id, created_at, last_login 
+            SELECT id, username, email, whatsapp, role, status, expires_at, credits, parent_user_id, created_at, last_login 
             FROM usuarios 
             WHERE id = ?
         ");
@@ -111,6 +111,15 @@ class User {
                 $stmt->execute([$data['email']]);
                 if ($stmt->fetch()) {
                     return ['success' => false, 'message' => 'Email já está em uso'];
+                }
+            }
+            
+            // Verificar se WhatsApp já existe (se fornecido)
+            if (!empty($data['whatsapp'])) {
+                $stmt = $this->db->prepare("SELECT id FROM usuarios WHERE whatsapp = ?");
+                $stmt->execute([$data['whatsapp']]);
+                if ($stmt->fetch()) {
+                    return ['success' => false, 'message' => 'Número de WhatsApp já está em uso'];
                 }
             }
             
@@ -158,8 +167,8 @@ class User {
             }
             
             $stmt = $this->db->prepare("
-                INSERT INTO usuarios (username, password, email, role, status, expires_at, parent_user_id) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO usuarios (username, password, email, whatsapp, role, status, expires_at, parent_user_id) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ");
             
             $hashedPassword = password_hash($data['password'], PASSWORD_DEFAULT);
@@ -169,6 +178,7 @@ class User {
                 $data['username'],
                 $hashedPassword,
                 $data['email'] ?? null,
+                $data['whatsapp'] ?? null,
                 $data['role'] ?? 'user',
                 $data['status'] ?? 'active',
                 $expiresAt,
@@ -197,6 +207,15 @@ class User {
                 $stmt->execute([$data['email'], $id]);
                 if ($stmt->fetch()) {
                     return ['success' => false, 'message' => 'Email já está em uso'];
+                }
+            }
+            
+            // Verificar se WhatsApp já existe (se fornecido e exceto para o próprio usuário)
+            if (!empty($data['whatsapp'])) {
+                $stmt = $this->db->prepare("SELECT id FROM usuarios WHERE whatsapp = ? AND id != ?");
+                $stmt->execute([$data['whatsapp'], $id]);
+                if ($stmt->fetch()) {
+                    return ['success' => false, 'message' => 'Número de WhatsApp já está em uso'];
                 }
             }
             
@@ -256,10 +275,11 @@ class User {
                 }
             }
             
-            $sql = "UPDATE usuarios SET username = ?, email = ?, role = ?, status = ?, expires_at = ?";
+            $sql = "UPDATE usuarios SET username = ?, email = ?, whatsapp = ?, role = ?, status = ?, expires_at = ?";
             $params = [
                 $data['username'],
                 $data['email'] ?? null,
+                $data['whatsapp'] ?? null,
                 $data['role'],
                 $data['status'],
                 !empty($data['expires_at']) ? $data['expires_at'] : null
@@ -413,7 +433,7 @@ class User {
     // Obter usuários criados por um master com filtros
     public function getUsersByParentId($parentId, $filters = []) {
         $sql = "
-            SELECT id, username, email, role, status, expires_at, created_at, last_login 
+            SELECT id, username, email, whatsapp, role, status, expires_at, created_at, last_login 
             FROM usuarios 
             WHERE parent_user_id = ?
         ";

@@ -81,55 +81,234 @@ if (!$referralUser) {
 // Obter configurações de teste grátis
 $trialDurationDays = $user->getTrialDurationDays();
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// Determinar o estágio atual do registro
+$stage = 'whatsapp_input'; // Padrão: solicitar WhatsApp
+
+if (isset($_SESSION['whatsapp_verification_stage'])) {
+    $stage = $_SESSION['whatsapp_verification_stage'];
+}
+
+// Função para enviar código via WhatsApp
+function sendWhatsAppCode($number, $code) {
+    $url = 'https://bolt-teste.lenwap.easypanel.host/send-code';
+    
     $data = [
-        'username' => trim($_POST['username']),
-        'email' => trim($_POST['email']),
-        'password' => trim($_POST['password']),
-        'role' => 'user', // Novos usuários sempre são 'user'
-        'status' => 'active',
-        'parent_user_id' => $referralUser,
-        'apply_trial' => true, // Sempre aplicar teste grátis
-        'trial_duration_days' => $trialDurationDays
+        'number' => $number,
+        'code' => $code,
+        'message' => "*FutBanner*\nOlá! Seu código de Validação é: *#code#*.\nNão compartilhe com ninguém."
     ];
     
-    // Validações
-    if (empty($data['username'])) {
-        $message = 'Nome de usuário é obrigatório';
-        $messageType = 'error';
-    } elseif (strlen($data['username']) < 3) {
-        $message = 'Nome de usuário deve ter pelo menos 3 caracteres';
-        $messageType = 'error';
-    } elseif (empty($data['email'])) {
-        $message = 'Email é obrigatório';
-        $messageType = 'error';
-    } elseif (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-        $message = 'Email inválido';
-        $messageType = 'error';
-    } elseif (strlen($data['password']) < 6) {
-        $message = 'A senha deve ter pelo menos 6 caracteres';
-        $messageType = 'error';
-    } elseif ($_POST['password'] !== $_POST['confirm_password']) {
-        $message = 'As senhas não coincidem';
-        $messageType = 'error';
-    } elseif (!isset($_POST['terms']) || $_POST['terms'] !== '1') {
-        $message = 'Você deve aceitar os termos de uso';
-        $messageType = 'error';
-    } else {
-        $result = $user->createUser($data);
-        $message = $result['message'];
-        $messageType = $result['success'] ? 'success' : 'error';
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL => $url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_HTTPHEADER => [
+            'Content-Type: application/json'
+        ],
+        CURLOPT_POSTFIELDS => json_encode($data),
+        CURLOPT_TIMEOUT => 10,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_SSL_VERIFYPEER => false
+    ]);
+    
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $error = curl_error($ch);
+    curl_close($ch);
+    
+    if ($response === false) {
+        return ['success' => false, 'message' => 'Erro na conexão: ' . $error];
+    }
+    
+    if ($httpCode !== 200) {
+        return ['success' => false, 'message' => 'Erro no envio do código. Tente novamente.'];
+    }
+    
+    return ['success' => true, 'message' => 'Código enviado com sucesso!'];
+}
+
+// Processar formulário
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? '';
+    
+    if ($action === 'send_whatsapp_code') {
+        // Etapa 1: Enviar código para WhatsApp
+        $whatsapp = trim($_POST['whatsapp']);
         
-        if ($result['success']) {
-            // Limpar código de referência da sessão após cadastro bem-sucedido
-            unset($_SESSION['referral_code']);
-            
-            // Redirecionar para login com mensagem de sucesso
-            $_SESSION['registration_success'] = true;
-            $_SESSION['registration_message'] = "Conta criada com sucesso! Você tem {$trialDurationDays} dias de teste grátis. Faça login para começar.";
-            header("Location: login.php");
-            exit();
+        // Validar número de WhatsApp
+        if (empty($whatsapp)) {
+            $message = 'Número de WhatsApp é obrigatório';
+            $messageType = 'error';
+        } elseif (!preg_match('/^\d{10,15}$/', preg_replace('/\D/', '', $whatsapp))) {
+            $message = 'Número de WhatsApp inválido. Use apenas números (10-15 dígitos)';
+            $messageType = 'error';
+        } else {
+            // Verificar se o WhatsApp já está em uso
+            $stmt = $db->getConnection()->prepare("SELECT id FROM usuarios WHERE whatsapp = ?");
+            $stmt->execute([$whatsapp]);
+            if ($stmt->fetch()) {
+                $message = 'Este número de WhatsApp já está cadastrado no sistema';
+                $messageType = 'error';
+            } else {
+                // Gerar código de 6 dígitos
+                $verificationCode = sprintf('%06d', mt_rand(0, 999999));
+                
+                // Enviar código via WhatsApp
+                $sendResult = sendWhatsAppCode($whatsapp, $verificationCode);
+                
+                if ($sendResult['success']) {
+                    // Armazenar dados de verificação na sessão
+                    $_SESSION['whatsapp_verification'] = [
+                        'number' => $whatsapp,
+                        'code' => $verificationCode,
+                        'expires_at' => time() + (10 * 60), // 10 minutos
+                        'attempts' => 0
+                    ];
+                    $_SESSION['whatsapp_verification_stage'] = 'code_input';
+                    
+                    $message = 'Código enviado para seu WhatsApp! Verifique suas mensagens.';
+                    $messageType = 'success';
+                    $stage = 'code_input';
+                } else {
+                    $message = $sendResult['message'];
+                    $messageType = 'error';
+                }
+            }
         }
+    } elseif ($action === 'verify_whatsapp_code') {
+        // Etapa 2: Verificar código do WhatsApp
+        $inputCode = trim($_POST['verification_code']);
+        
+        if (!isset($_SESSION['whatsapp_verification'])) {
+            $message = 'Sessão de verificação expirada. Solicite um novo código.';
+            $messageType = 'error';
+            $stage = 'whatsapp_input';
+            unset($_SESSION['whatsapp_verification_stage']);
+        } else {
+            $verification = $_SESSION['whatsapp_verification'];
+            
+            // Verificar se não expirou
+            if (time() > $verification['expires_at']) {
+                $message = 'Código expirado. Solicite um novo código.';
+                $messageType = 'error';
+                $stage = 'whatsapp_input';
+                unset($_SESSION['whatsapp_verification']);
+                unset($_SESSION['whatsapp_verification_stage']);
+            } elseif (empty($inputCode)) {
+                $message = 'Digite o código de verificação';
+                $messageType = 'error';
+            } elseif ($verification['attempts'] >= 3) {
+                $message = 'Muitas tentativas incorretas. Solicite um novo código.';
+                $messageType = 'error';
+                $stage = 'whatsapp_input';
+                unset($_SESSION['whatsapp_verification']);
+                unset($_SESSION['whatsapp_verification_stage']);
+            } elseif ($inputCode !== $verification['code']) {
+                // Incrementar tentativas
+                $_SESSION['whatsapp_verification']['attempts']++;
+                $remainingAttempts = 3 - $_SESSION['whatsapp_verification']['attempts'];
+                $message = "Código incorreto. Você tem {$remainingAttempts} tentativas restantes.";
+                $messageType = 'error';
+            } else {
+                // Código correto!
+                $_SESSION['validated_whatsapp'] = $verification['number'];
+                $_SESSION['whatsapp_verification_stage'] = 'registration_form';
+                unset($_SESSION['whatsapp_verification']);
+                
+                $message = 'WhatsApp verificado com sucesso! Complete seu cadastro.';
+                $messageType = 'success';
+                $stage = 'registration_form';
+            }
+        }
+    } elseif ($action === 'resend_code') {
+        // Reenviar código
+        if (isset($_SESSION['whatsapp_verification'])) {
+            $whatsapp = $_SESSION['whatsapp_verification']['number'];
+            $verificationCode = sprintf('%06d', mt_rand(0, 999999));
+            
+            $sendResult = sendWhatsAppCode($whatsapp, $verificationCode);
+            
+            if ($sendResult['success']) {
+                $_SESSION['whatsapp_verification']['code'] = $verificationCode;
+                $_SESSION['whatsapp_verification']['expires_at'] = time() + (10 * 60);
+                $_SESSION['whatsapp_verification']['attempts'] = 0;
+                
+                $message = 'Novo código enviado para seu WhatsApp!';
+                $messageType = 'success';
+            } else {
+                $message = $sendResult['message'];
+                $messageType = 'error';
+            }
+        }
+    } elseif ($action === 'complete_registration') {
+        // Etapa 3: Completar registro
+        if (!isset($_SESSION['validated_whatsapp'])) {
+            $message = 'WhatsApp não foi verificado. Reinicie o processo.';
+            $messageType = 'error';
+            $stage = 'whatsapp_input';
+            unset($_SESSION['whatsapp_verification_stage']);
+        } else {
+            $data = [
+                'username' => trim($_POST['username']),
+                'email' => trim($_POST['email']),
+                'whatsapp' => $_SESSION['validated_whatsapp'],
+                'password' => trim($_POST['password']),
+                'role' => 'user',
+                'status' => 'active',
+                'parent_user_id' => $referralUser,
+                'apply_trial' => true,
+                'trial_duration_days' => $trialDurationDays
+            ];
+            
+            // Validações
+            if (empty($data['username'])) {
+                $message = 'Nome de usuário é obrigatório';
+                $messageType = 'error';
+            } elseif (strlen($data['username']) < 3) {
+                $message = 'Nome de usuário deve ter pelo menos 3 caracteres';
+                $messageType = 'error';
+            } elseif (empty($data['email'])) {
+                $message = 'Email é obrigatório';
+                $messageType = 'error';
+            } elseif (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+                $message = 'Email inválido';
+                $messageType = 'error';
+            } elseif (strlen($data['password']) < 6) {
+                $message = 'A senha deve ter pelo menos 6 caracteres';
+                $messageType = 'error';
+            } elseif ($_POST['password'] !== $_POST['confirm_password']) {
+                $message = 'As senhas não coincidem';
+                $messageType = 'error';
+            } elseif (!isset($_POST['terms']) || $_POST['terms'] !== '1') {
+                $message = 'Você deve aceitar os termos de uso';
+                $messageType = 'error';
+            } else {
+                $result = $user->createUser($data);
+                $message = $result['message'];
+                $messageType = $result['success'] ? 'success' : 'error';
+                
+                if ($result['success']) {
+                    // Limpar todas as sessões de verificação
+                    unset($_SESSION['referral_code']);
+                    unset($_SESSION['validated_whatsapp']);
+                    unset($_SESSION['whatsapp_verification_stage']);
+                    unset($_SESSION['whatsapp_verification']);
+                    
+                    // Redirecionar para login com mensagem de sucesso
+                    $_SESSION['registration_success'] = true;
+                    $_SESSION['registration_message'] = "Conta criada com sucesso! Você tem {$trialDurationDays} dias de teste grátis. Faça login para começar.";
+                    header("Location: login.php");
+                    exit();
+                }
+            }
+        }
+    } elseif ($action === 'restart_verification') {
+        // Reiniciar processo de verificação
+        unset($_SESSION['whatsapp_verification']);
+        unset($_SESSION['whatsapp_verification_stage']);
+        unset($_SESSION['validated_whatsapp']);
+        $stage = 'whatsapp_input';
     }
 }
 ?>
@@ -357,6 +536,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             margin-top: 0.5rem;
         }
 
+        .verification-step {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .step {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.875rem;
+            transition: var(--transition);
+        }
+
+        .step.active {
+            background: var(--primary-500);
+            color: white;
+        }
+
+        .step.completed {
+            background: var(--success-500);
+            color: white;
+        }
+
+        .step.pending {
+            background: var(--bg-tertiary);
+            color: var(--text-muted);
+        }
+
+        .step-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .step-description {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
         .form-group {
             margin-bottom: 1.5rem;
             position: relative;
@@ -422,6 +656,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         .password-toggle-icon:hover {
             color: var(--primary-500);
+        }
+
+        .verification-code-input {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: 0.5rem;
+            font-family: monospace;
         }
 
         .checkbox-wrapper {
@@ -504,6 +746,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             gap: 0.5rem;
         }
 
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
         .submit-btn::before {
             content: '';
             position: absolute;
@@ -515,11 +762,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             transition: left 0.5s ease;
         }
 
-        .submit-btn:hover::before {
+        .submit-btn:hover:not(:disabled)::before {
             left: 100%;
         }
 
-        .submit-btn:hover {
+        .submit-btn:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: var(--shadow-lg);
             background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
@@ -529,24 +776,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             transform: translateY(0);
         }
 
-        .error-message {
-            background: var(--danger-50);
-            color: var(--danger-600);
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: var(--bg-secondary);
+            transform: translateY(-1px);
+        }
+
+        .message {
             padding: 1rem;
             border-radius: var(--border-radius);
-            margin-top: 1.5rem;
+            margin-bottom: 1.5rem;
             font-size: 0.875rem;
-            border: 1px solid rgba(239, 68, 68, 0.2);
+            border: 1px solid;
             display: flex;
             align-items: center;
             gap: 0.5rem;
             font-weight: 500;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .message.success {
+            background: var(--success-50);
+            color: var(--success-600);
+            border-color: rgba(34, 197, 94, 0.2);
+        }
+
+        .message.error {
+            background: var(--danger-50);
+            color: var(--danger-600);
+            border-color: rgba(239, 68, 68, 0.2);
             animation: shake 0.5s ease-in-out;
         }
 
-        [data-theme="dark"] .error-message {
+        [data-theme="dark"] .message.success {
+            background: rgba(34, 197, 94, 0.1);
+            color: var(--success-400);
+        }
+
+        [data-theme="dark"] .message.error {
             background: rgba(239, 68, 68, 0.1);
-            color: var(--danger-500);
+            color: var(--danger-400);
         }
 
         .login-link {
@@ -571,37 +845,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             text-decoration: underline;
         }
 
-        .password-strength {
-            margin-top: 0.5rem;
+        .verification-info {
+            background: var(--warning-50);
+            border: 1px solid var(--warning-200);
+            border-radius: var(--border-radius);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
         }
 
-        .strength-bar {
-            width: 100%;
-            height: 4px;
-            background: var(--bg-tertiary);
-            border-radius: 2px;
-            overflow: hidden;
+        .verification-info h4 {
+            color: var(--warning-700);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        .strength-fill {
-            height: 100%;
-            transition: all 0.3s ease;
-            border-radius: 2px;
+        .verification-info p {
+            color: var(--warning-600);
         }
 
-        .strength-text {
-            font-size: 0.75rem;
-            margin-top: 0.25rem;
-            font-weight: 500;
+        [data-theme="dark"] .verification-info {
+            background: rgba(245, 158, 11, 0.1);
+            border-color: rgba(245, 158, 11, 0.2);
         }
 
-        .password-match {
-            margin-top: 0.5rem;
+        [data-theme="dark"] .verification-info h4 {
+            color: var(--warning-400);
         }
 
-        .match-text {
-            font-size: 0.75rem;
-            font-weight: 500;
+        [data-theme="dark"] .verification-info p {
+            color: var(--warning-300);
+        }
+
+        .countdown {
+            font-weight: 600;
+            color: var(--primary-600);
+        }
+
+        [data-theme="dark"] .countdown {
+            color: var(--primary-400);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .action-buttons .submit-btn {
+            flex: 1;
         }
 
         /* Animations */
@@ -647,6 +941,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 height: 60px;
                 font-size: 1.5rem;
             }
+
+            .action-buttons {
+                flex-direction: column;
+            }
         }
 
         /* Dark theme adjustments */
@@ -680,6 +978,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             background: rgba(34, 197, 94, 0.1);
             color: var(--success-400);
         }
+
+        [data-theme="dark"] .verification-step {
+            background: var(--bg-tertiary);
+        }
     </style>
 </head>
 <body>
@@ -699,12 +1001,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php endif; ?>
             </div>
             <h1 class="register-title">Criar Conta</h1>
-            <p class="register-subtitle">Junte-se ao FutBanner e comece a criar banners incríveis</p>
+            <p class="register-subtitle">
+                <?php
+                switch ($stage) {
+                    case 'whatsapp_input':
+                        echo 'Primeiro, vamos verificar seu WhatsApp';
+                        break;
+                    case 'code_input':
+                        echo 'Digite o código que enviamos para seu WhatsApp';
+                        break;
+                    case 'registration_form':
+                        echo 'Complete seu cadastro no FutBanner';
+                        break;
+                }
+                ?>
+            </p>
         </div>
 
         <div class="register-form">
+            <!-- Step Indicator -->
+            <div class="step-indicator">
+                <div class="step <?php echo $stage === 'whatsapp_input' ? 'active' : ($stage === 'code_input' || $stage === 'registration_form' ? 'completed' : 'pending'); ?>">
+                    <i class="fab fa-whatsapp"></i>
+                </div>
+                <div class="step <?php echo $stage === 'code_input' ? 'active' : ($stage === 'registration_form' ? 'completed' : 'pending'); ?>">
+                    <i class="fas fa-key"></i>
+                </div>
+                <div class="step <?php echo $stage === 'registration_form' ? 'active' : 'pending'; ?>">
+                    <i class="fas fa-user-plus"></i>
+                </div>
+            </div>
+
             <!-- Referral Info -->
-            <?php if ($referralUserData): ?>
+            <?php if ($referralUserData && $stage === 'registration_form'): ?>
             <div class="referral-info <?php echo $referralUserData['role'] === 'admin' ? 'admin' : ''; ?>">
                 <h3>
                     <i class="fas fa-<?php echo $referralUserData['role'] === 'admin' ? 'crown' : 'user-friends'; ?>"></i>
@@ -728,14 +1057,126 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
             <?php endif; ?>
 
+            <!-- Messages -->
             <?php if ($message): ?>
-                <div class="error-message">
-                    <i class="fas fa-exclamation-triangle"></i>
+                <div class="message <?php echo $messageType; ?>">
+                    <i class="fas fa-<?php echo $messageType === 'success' ? 'check-circle' : 'exclamation-triangle'; ?>"></i>
                     <?php echo $message; ?>
                 </div>
             <?php endif; ?>
 
+            <!-- Stage 1: WhatsApp Input -->
+            <?php if ($stage === 'whatsapp_input'): ?>
+            <div class="verification-step">
+                <div class="step-title">
+                    <i class="fab fa-whatsapp text-success-500"></i>
+                    Verificação por WhatsApp
+                </div>
+                <div class="step-description">
+                    Para garantir a segurança, precisamos verificar seu número de WhatsApp
+                </div>
+            </div>
+
+            <form method="POST" action="" id="whatsappForm">
+                <input type="hidden" name="action" value="send_whatsapp_code">
+                <?php if ($referralCode): ?>
+                    <input type="hidden" name="referral_code" value="<?php echo htmlspecialchars($referralCode); ?>">
+                <?php endif; ?>
+
+                <div class="form-group">
+                    <label for="whatsapp" class="form-label">
+                        <i class="fab fa-whatsapp"></i>
+                        Número do WhatsApp
+                    </label>
+                    <div class="input-wrapper">
+                        <i class="fab fa-whatsapp input-icon-left"></i>
+                        <input type="tel" id="whatsapp" name="whatsapp" class="form-input" 
+                               placeholder="37998382132" required 
+                               value="<?php echo htmlspecialchars($_POST['whatsapp'] ?? ''); ?>"
+                               pattern="[0-9]{10,15}">
+                    </div>
+                    <p class="text-xs text-muted mt-1">
+                        Digite apenas números, incluindo código do país (ex: 5511999999999)
+                    </p>
+                </div>
+
+                <button type="submit" class="submit-btn" id="sendCodeBtn">
+                    <i class="fab fa-whatsapp"></i>
+                    <span>Enviar Código de Verificação</span>
+                </button>
+            </form>
+            <?php endif; ?>
+
+            <!-- Stage 2: Code Verification -->
+            <?php if ($stage === 'code_input'): ?>
+            <div class="verification-step">
+                <div class="step-title">
+                    <i class="fas fa-key text-primary-500"></i>
+                    Código de Verificação
+                </div>
+                <div class="step-description">
+                    Enviamos um código de 6 dígitos para: <strong><?php echo htmlspecialchars($_SESSION['whatsapp_verification']['number'] ?? ''); ?></strong>
+                </div>
+            </div>
+
+            <div class="verification-info">
+                <h4>
+                    <i class="fas fa-clock"></i>
+                    Código válido por <span class="countdown" id="countdown">10:00</span>
+                </h4>
+                <p>Verifique suas mensagens no WhatsApp e digite o código de 6 dígitos</p>
+            </div>
+
+            <form method="POST" action="" id="verifyCodeForm">
+                <input type="hidden" name="action" value="verify_whatsapp_code">
+
+                <div class="form-group">
+                    <label for="verification_code" class="form-label">
+                        <i class="fas fa-key"></i>
+                        Código de Verificação
+                    </label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-key input-icon-left"></i>
+                        <input type="text" id="verification_code" name="verification_code" class="form-input verification-code-input" 
+                               placeholder="123456" required maxlength="6" pattern="[0-9]{6}">
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button type="submit" class="submit-btn">
+                        <i class="fas fa-check"></i>
+                        <span>Verificar Código</span>
+                    </button>
+                    
+                    <button type="button" class="submit-btn btn-secondary" id="resendCodeBtn">
+                        <i class="fas fa-redo"></i>
+                        <span>Reenviar Código</span>
+                    </button>
+                </div>
+
+                <div class="action-buttons mt-3">
+                    <button type="button" class="submit-btn btn-secondary" onclick="restartVerification()">
+                        <i class="fas fa-arrow-left"></i>
+                        <span>Alterar Número</span>
+                    </button>
+                </div>
+            </form>
+            <?php endif; ?>
+
+            <!-- Stage 3: Complete Registration -->
+            <?php if ($stage === 'registration_form'): ?>
+            <div class="verification-step">
+                <div class="step-title">
+                    <i class="fas fa-check-circle text-success-500"></i>
+                    WhatsApp Verificado
+                </div>
+                <div class="step-description">
+                    Número verificado: <strong><?php echo htmlspecialchars($_SESSION['validated_whatsapp'] ?? ''); ?></strong>
+                </div>
+            </div>
+
             <form method="POST" action="" id="registerForm">
+                <input type="hidden" name="action" value="complete_registration">
                 <?php if ($referralCode): ?>
                     <input type="hidden" name="referral_code" value="<?php echo htmlspecialchars($referralCode); ?>">
                 <?php endif; ?>
@@ -779,12 +1220,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                placeholder="Mínimo de 6 caracteres" required autocomplete="new-password">
                         <i class="fas fa-eye password-toggle-icon" id="togglePassword"></i>
                     </div>
-                    <div class="password-strength" id="passwordStrength" style="display: none;">
-                        <div class="strength-bar">
-                            <div class="strength-fill" id="strengthFill"></div>
-                        </div>
-                        <p class="strength-text" id="strengthText"></p>
-                    </div>
                 </div>
 
                 <div class="form-group">
@@ -797,9 +1232,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <input type="password" id="confirm_password" name="confirm_password" class="form-input" 
                                placeholder="Repita sua senha" required autocomplete="new-password">
                         <i class="fas fa-eye password-toggle-icon" id="toggleConfirmPassword"></i>
-                    </div>
-                    <div class="password-match" id="passwordMatch" style="display: none;">
-                        <p class="match-text" id="matchText"></p>
                     </div>
                 </div>
 
@@ -815,7 +1247,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <i class="fas fa-user-plus"></i>
                     <span>Criar Conta Grátis</span>
                 </button>
+
+                <div class="action-buttons mt-3">
+                    <button type="button" class="submit-btn btn-secondary" onclick="restartVerification()">
+                        <i class="fas fa-arrow-left"></i>
+                        <span>Alterar WhatsApp</span>
+                    </button>
+                </div>
             </form>
+            <?php endif; ?>
 
             <div class="login-link">
                 <p>Já tem uma conta? <a href="login.php">Faça login aqui</a></p>
@@ -847,116 +1287,174 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             themeIcon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
         }
 
-        // Form enhancements
-        const registerForm = document.getElementById('registerForm');
-        const submitBtn = document.getElementById('submitBtn');
+        // WhatsApp number formatting
+        const whatsappInput = document.getElementById('whatsapp');
+        if (whatsappInput) {
+            whatsappInput.addEventListener('input', function(e) {
+                // Remove non-numeric characters
+                let value = e.target.value.replace(/\D/g, '');
+                
+                // Limit to 15 digits
+                if (value.length > 15) {
+                    value = value.substring(0, 15);
+                }
+                
+                e.target.value = value;
+            });
+
+            // Auto-focus
+            whatsappInput.focus();
+        }
+
+        // Verification code formatting
+        const verificationCodeInput = document.getElementById('verification_code');
+        if (verificationCodeInput) {
+            verificationCodeInput.addEventListener('input', function(e) {
+                // Remove non-numeric characters
+                let value = e.target.value.replace(/\D/g, '');
+                
+                // Limit to 6 digits
+                if (value.length > 6) {
+                    value = value.substring(0, 6);
+                }
+                
+                e.target.value = value;
+                
+                // Auto-submit when 6 digits are entered
+                if (value.length === 6) {
+                    document.getElementById('verifyCodeForm').submit();
+                }
+            });
+
+            // Auto-focus
+            verificationCodeInput.focus();
+        }
+
+        // Countdown timer for code expiration
+        <?php if ($stage === 'code_input' && isset($_SESSION['whatsapp_verification'])): ?>
+        const expiresAt = <?php echo $_SESSION['whatsapp_verification']['expires_at']; ?>;
+        const countdownElement = document.getElementById('countdown');
+        
+        function updateCountdown() {
+            const now = Math.floor(Date.now() / 1000);
+            const remaining = expiresAt - now;
+            
+            if (remaining <= 0) {
+                countdownElement.textContent = 'Expirado';
+                countdownElement.style.color = 'var(--danger-500)';
+                
+                // Disable form
+                const form = document.getElementById('verifyCodeForm');
+                const inputs = form.querySelectorAll('input, button');
+                inputs.forEach(input => input.disabled = true);
+                
+                // Show restart button
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+                
+                return;
+            }
+            
+            const minutes = Math.floor(remaining / 60);
+            const seconds = remaining % 60;
+            countdownElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        updateCountdown();
+        const countdownInterval = setInterval(updateCountdown, 1000);
+        <?php endif; ?>
+
+        // Resend code functionality
+        const resendCodeBtn = document.getElementById('resendCodeBtn');
+        if (resendCodeBtn) {
+            resendCodeBtn.addEventListener('click', function() {
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Reenviando...</span>';
+                
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.innerHTML = '<input type="hidden" name="action" value="resend_code">';
+                document.body.appendChild(form);
+                form.submit();
+            });
+        }
 
         // Password toggle functionality
-        document.addEventListener('DOMContentLoaded', function() {
-            const togglePassword = document.getElementById('togglePassword');
-            const toggleConfirmPassword = document.getElementById('toggleConfirmPassword');
-            const passwordInput = document.getElementById('password');
-            const confirmPasswordInput = document.getElementById('confirm_password');
-
-            // Toggle password visibility
-            function setupPasswordToggle(toggleBtn, inputField) {
-                if (toggleBtn && inputField) {
-                    toggleBtn.addEventListener('click', function() {
-                        const type = inputField.getAttribute('type') === 'password' ? 'text' : 'password';
-                        inputField.setAttribute('type', type);
-                        this.classList.toggle('fa-eye');
-                        this.classList.toggle('fa-eye-slash');
-                    });
-                }
+        function setupPasswordToggle(toggleId, inputId) {
+            const toggle = document.getElementById(toggleId);
+            const input = document.getElementById(inputId);
+            
+            if (toggle && input) {
+                toggle.addEventListener('click', function() {
+                    const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+                    input.setAttribute('type', type);
+                    this.classList.toggle('fa-eye');
+                    this.classList.toggle('fa-eye-slash');
+                });
             }
+        }
 
-            setupPasswordToggle(togglePassword, passwordInput);
-            setupPasswordToggle(toggleConfirmPassword, confirmPasswordInput);
+        setupPasswordToggle('togglePassword', 'password');
+        setupPasswordToggle('toggleConfirmPassword', 'confirm_password');
 
-            // Password strength indicator
-            const passwordStrength = document.getElementById('passwordStrength');
-            const strengthFill = document.getElementById('strengthFill');
-            const strengthText = document.getElementById('strengthText');
-            const passwordMatch = document.getElementById('passwordMatch');
-            const matchText = document.getElementById('matchText');
+        // Password confirmation validation
+        const passwordInput = document.getElementById('password');
+        const confirmPasswordInput = document.getElementById('confirm_password');
 
-            function checkPasswordStrength(password) {
-                let strength = 0;
-                
-                if (password.length >= 6) strength += 1;
-                if (password.length >= 8) strength += 1;
-                if (/[a-z]/.test(password)) strength += 1;
-                if (/[A-Z]/.test(password)) strength += 1;
-                if (/[0-9]/.test(password)) strength += 1;
-                if (/[^A-Za-z0-9]/.test(password)) strength += 1;
-                
-                const colors = ['#ef4444', '#f59e0b', '#eab308', '#84cc16', '#22c55e', '#16a34a'];
-                const texts = ['Muito fraca', 'Fraca', 'Regular', 'Boa', 'Forte', 'Muito forte'];
-                
-                strengthFill.style.width = `${(strength / 6) * 100}%`;
-                strengthFill.style.backgroundColor = colors[strength - 1] || colors[0];
-                strengthText.textContent = texts[strength - 1] || texts[0];
-                strengthText.style.color = colors[strength - 1] || colors[0];
-                
-                return strength;
-            }
-
+        if (passwordInput && confirmPasswordInput) {
             function checkPasswordMatch() {
-                const password = passwordInput.value;
-                const confirmPassword = confirmPasswordInput.value;
-                
-                if (confirmPassword) {
-                    passwordMatch.style.display = 'block';
-                    if (password === confirmPassword) {
-                        matchText.textContent = '✓ Senhas coincidem';
-                        matchText.style.color = 'var(--success-600)';
-                        confirmPasswordInput.setCustomValidity('');
-                    } else {
-                        matchText.textContent = '✗ Senhas não coincidem';
-                        matchText.style.color = 'var(--danger-600)';
-                        confirmPasswordInput.setCustomValidity('As senhas não coincidem');
-                    }
+                if (confirmPasswordInput.value && passwordInput.value !== confirmPasswordInput.value) {
+                    confirmPasswordInput.setCustomValidity('As senhas não coincidem');
                 } else {
-                    passwordMatch.style.display = 'none';
                     confirmPasswordInput.setCustomValidity('');
                 }
             }
 
-            passwordInput.addEventListener('input', function() {
-                const password = this.value;
-                if (password) {
-                    passwordStrength.style.display = 'block';
-                    checkPasswordStrength(password);
-                } else {
-                    passwordStrength.style.display = 'none';
-                }
-                checkPasswordMatch();
-            });
-
+            passwordInput.addEventListener('input', checkPasswordMatch);
             confirmPasswordInput.addEventListener('input', checkPasswordMatch);
+        }
 
-            // Auto-focus no campo de usuário
-            const usernameInput = document.getElementById('username');
-            if (usernameInput) {
-                usernameInput.focus();
-            }
+        // Form submission loading states
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                const submitBtn = this.querySelector('button[type="submit"]');
+                if (submitBtn && !submitBtn.disabled) {
+                    submitBtn.disabled = true;
+                    const originalContent = submitBtn.innerHTML;
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Processando...</span>';
+                    
+                    // Re-enable after 5 seconds to prevent permanent lock
+                    setTimeout(() => {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalContent;
+                    }, 5000);
+                }
+            });
         });
 
-        // Form submission with loading state
-        registerForm.addEventListener('submit', function(e) {
-            submitBtn.classList.add('loading');
-            const btnText = submitBtn.querySelector('span');
-            if (btnText) {
-                btnText.textContent = ' Criando conta...';
-            }
-        });
+        // Restart verification function
+        function restartVerification() {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.innerHTML = '<input type="hidden" name="action" value="restart_verification">';
+            document.body.appendChild(form);
+            form.submit();
+        }
 
-        // Keyboard shortcuts
-        document.addEventListener('keydown', function(e) {
-            // Alt + T for theme toggle
-            if (e.altKey && e.key === 't') {
-                e.preventDefault();
-                themeToggle.click();
+        // Auto-focus on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const stage = '<?php echo $stage; ?>';
+            
+            if (stage === 'whatsapp_input') {
+                const whatsappInput = document.getElementById('whatsapp');
+                if (whatsappInput) whatsappInput.focus();
+            } else if (stage === 'code_input') {
+                const codeInput = document.getElementById('verification_code');
+                if (codeInput) codeInput.focus();
+            } else if (stage === 'registration_form') {
+                const usernameInput = document.getElementById('username');
+                if (usernameInput) usernameInput.focus();
             }
         });
     </script>

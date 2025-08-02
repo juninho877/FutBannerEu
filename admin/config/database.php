@@ -45,6 +45,7 @@ class Database {
             username VARCHAR(50) UNIQUE NOT NULL,
             password VARCHAR(255) NOT NULL,
             email VARCHAR(100) UNIQUE,
+            whatsapp VARCHAR(20),
             role ENUM('admin', 'master', 'user') DEFAULT 'user',
             status ENUM('active', 'inactive', 'trial') DEFAULT 'active',
             expires_at DATE NULL,
@@ -275,6 +276,23 @@ class Database {
                     ALTER TABLE usuarios 
                     ADD COLUMN parent_user_id INT NULL AFTER credits,
                     ADD FOREIGN KEY (parent_user_id) REFERENCES usuarios(id) ON DELETE SET NULL
+                ");
+            }
+            
+            // Verificar se a coluna whatsapp existe na tabela usuarios
+            $stmt = $this->connection->prepare("
+                SELECT COUNT(*) as column_exists 
+                FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'usuarios' AND COLUMN_NAME = 'whatsapp'
+            ");
+            $stmt->execute();
+            $result = $stmt->fetch();
+            
+            if ($result['column_exists'] == 0) {
+                // Adicionar coluna whatsapp
+                $this->connection->exec("
+                    ALTER TABLE usuarios 
+                    ADD COLUMN whatsapp VARCHAR(20) AFTER email
                 ");
             }
             
