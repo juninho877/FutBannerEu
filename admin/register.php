@@ -1091,12 +1091,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="input-wrapper">
                         <i class="fab fa-whatsapp input-icon-left"></i>
                         <input type="tel" id="whatsapp" name="whatsapp" class="form-input" 
-                               placeholder="37998382132" required 
+                               placeholder="11999999999" required 
                                value="<?php echo htmlspecialchars($_POST['whatsapp'] ?? ''); ?>"
                                pattern="[0-9]{10,15}">
                     </div>
                     <p class="text-xs text-muted mt-1">
-                        Digite apenas números, incluindo código do país (ex: 5511999999999)
+                        Digite apenas números (ex: 5511999999999)
                     </p>
                 </div>
 
