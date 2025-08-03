@@ -2,63 +2,110 @@
 require_once 'TelegramSettings.php';
 require_once __DIR__ . '/../includes/banner_functions.php';
 
-class TelegramService {
+class TelegramService
+{
+    /**
+     * @var TelegramSettingsService
+     * A dependência para o serviço de configurações do Telegram.
+     */
     private $telegramSettings;
-    
-    public function __construct() {
+
+    /**
+     * Construtor da classe.
+     */
+    public function __construct()
+    {
         $this->telegramSettings = new TelegramSettings();
     }
-    
+
     /**
-     * Enviar múltiplas imagens como álbum para o Telegram
-     * @param int $userId ID do usuário
-     * @param array $imagePaths Array com caminhos das imagens
-     * @param string $caption Legenda opcional
-     * @return array Resultado do envio
+     * Envia um álbum de fotos para um chat do Telegram.
+     * Se houver mais de 10 imagens, elas são divididas em múltiplos álbuns.
+     *
+     * @param int $userId O ID do usuário associado às configurações do Telegram.
+     * @param array $imagePaths Um array de caminhos de arquivo para as imagens.
+     * @param string $caption A legenda para a primeira imagem do primeiro álbum.
+     * @return array Um array indicando o sucesso da operação e uma mensagem.
      */
-    public function sendImageAlbum($userId, $imagePaths, $caption = '') {
+    public function sendImageAlbum(string $userId, array $imagePaths, string $caption = ''): array
+    {
         try {
-            // Verificar se o usuário tem configurações do Telegram
+            // 1. Validar e obter configurações do usuário.
             $settings = $this->telegramSettings->getSettings($userId);
-            if (!$settings) {
+            if (empty($settings['bot_token']) || empty($settings['chat_id'])) {
                 return ['success' => false, 'message' => 'Configurações do Telegram não encontradas. Configure primeiro em Telegram > Configurações.'];
             }
-            
+
             $botToken = $settings['bot_token'];
             $chatId = $settings['chat_id'];
-            
-            // Validar se há imagens para enviar
+
+            // 2. Validar se há imagens para enviar.
             if (empty($imagePaths)) {
-                return ['success' => false, 'message' => 'Nenhuma imagem fornecida para envio'];
+                return ['success' => false, 'message' => 'Nenhuma imagem fornecida para envio.'];
             }
-            
-            // Preparar mídia para o álbum
-            $media = [];
-            foreach ($imagePaths as $index => $imagePath) {
-                if (!file_exists($imagePath)) {
-                    error_log("Arquivo não encontrado: " . $imagePath);
-                    continue;
-                }
-                
-                $media[] = [
-                    'type' => 'photo',
-                    'media' => 'attach://photo' . $index,
-                    'caption' => ($index === 0 && !empty($caption)) ? $caption : ''
-                ];
-            }
-            
-            if (empty($media)) {
-                return ['success' => false, 'message' => 'Nenhuma imagem válida encontrada'];
-            }
-            
-            // Se há apenas uma imagem, enviar como foto simples
-            if (count($media) === 1) {
+
+            // 3. Se houver apenas uma imagem, enviar como foto simples e retornar.
+            if (count($imagePaths) === 1) {
                 return $this->sendSinglePhoto($botToken, $chatId, $imagePaths[0], $caption);
             }
+
+            // 4. Dividir as imagens em grupos de no máximo 10 para criar múltiplos álbuns.
+            $imageChunks = array_chunk($imagePaths, 10);
+            $results = [];
+
+            // 5. Iterar sobre cada grupo (álbum) de imagens.
+            foreach ($imageChunks as $chunkIndex => $imageChunk) {
+                $media = [];
+                $validImagesInChunk = [];
+                
+                // Preparar a mídia para o álbum atual, validando cada arquivo.
+                foreach ($imageChunk as $imageIndex => $imagePath) {
+                    if (!file_exists($imagePath)) {
+                        error_log("Erro: Arquivo não encontrado - " . $imagePath);
+                        continue;
+                    }
+
+                    $validImagesInChunk[] = $imagePath;
+                    $currentCaption = '';
+
+                    // A legenda é adicionada apenas à primeira imagem do primeiro álbum.
+                    if ($chunkIndex === 0 && $imageIndex === 0 && !empty($caption)) {
+                        $currentCaption = $caption;
+                    }
+                    
+                    $media[] = [
+                        'type' => 'photo',
+                        'media' => 'attach://photo' . $imageIndex,
+                        'caption' => $currentCaption
+                    ];
+                }
+
+                // Se o álbum atual não tiver imagens válidas, continuar para o próximo.
+                if (empty($media)) {
+                    $results[] = ['success' => false, 'message' => 'Nenhuma imagem válida encontrada no chunk ' . ($chunkIndex + 1)];
+                    continue;
+                }
+
+                // 6. Enviar o álbum atual para o Telegram.
+                $response = $this->sendMediaGroup($botToken, $chatId, $validImagesInChunk, $media);
+                $results[] = $response;
+            }
+
+            // 7. Consolidar os resultados de todos os álbuns.
+            $allSuccess = true;
+            $messages = [];
+            foreach ($results as $result) {
+                if (!$result['success']) {
+                    $allSuccess = false;
+                }
+                $messages[] = $result['message'];
+            }
             
-            // Enviar como álbum
-            return $this->sendMediaGroup($botToken, $chatId, $imagePaths, $media, $caption);
-            
+            return [
+                'success' => $allSuccess,
+                'message' => implode(' | ', $messages)
+            ];
+
         } catch (Exception $e) {
             error_log("Erro no TelegramService::sendImageAlbum: " . $e->getMessage());
             return ['success' => false, 'message' => 'Erro interno: ' . $e->getMessage()];
@@ -68,7 +115,8 @@ class TelegramService {
     /**
      * Enviar uma única foto
      */
-    private function sendSinglePhoto($botToken, $chatId, $imagePath, $caption) {
+    private function sendSinglePhoto($botToken, $chatId, $imagePath, $caption)
+    {
         try {
             $url = "https://api.telegram.org/bot{$botToken}/sendPhoto";
             
@@ -119,9 +167,8 @@ class TelegramService {
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_TIMEOUT => 30,
                 CURLOPT_USERAGENT => 'FutBanner/1.0',
-                CURLOPT_VERBOSE => true,
+                CURLOPT_VERBOSE => false,
                 CURLOPT_SSL_VERIFYPEER => true,
-                CURLOPT_STDERR => fopen('php://temp', 'w+')
             ]);
             
             // Executar cURL
@@ -130,12 +177,9 @@ class TelegramService {
             $error = curl_error($ch);
             $errno = curl_errno($ch);
             
-            // Obter informações de erro detalhadas
-            $verbose = stream_get_contents(fopen('php://temp', 'r'));
-            
             if ($response === false) {
                 curl_close($ch);
-                error_log("Erro cURL ao enviar foto: " . $error . " (código: " . $errno . ")\nVerbose: " . $verbose);
+                error_log("Erro cURL ao enviar foto: " . $error . " (código: " . $errno . ")");
                 return ['success' => false, 'message' => 'Erro na conexão com o Telegram: ' . $error . ' (código: ' . $errno . ')'];
             }
             
@@ -165,7 +209,8 @@ class TelegramService {
     /**
      * Enviar grupo de mídia (álbum)
      */
-    private function sendMediaGroup($botToken, $chatId, $imagePaths, $media, $caption) {
+    private function sendMediaGroup($botToken, $chatId, $imagePaths, $media)
+    {
         try {
             $url = "https://api.telegram.org/bot{$botToken}/sendMediaGroup";
             
@@ -196,9 +241,8 @@ class TelegramService {
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_TIMEOUT => 60, // Mais tempo para múltiplas imagens
                 CURLOPT_USERAGENT => 'FutBanner/1.0',
-                CURLOPT_VERBOSE => true,
+                CURLOPT_VERBOSE => false,
                 CURLOPT_SSL_VERIFYPEER => true,
-                CURLOPT_STDERR => fopen('php://temp', 'w+')
             ]);
             
             $response = curl_exec($ch);
@@ -206,12 +250,9 @@ class TelegramService {
             $error = curl_error($ch);
             $errno = curl_errno($ch);
             
-            // Obter informações de erro detalhadas
-            $verbose = stream_get_contents(fopen('php://temp', 'r'));
-            
             if ($response === false) {
                 curl_close($ch);
-                error_log("Erro cURL ao enviar álbum: " . $error . " (código: " . $errno . ")\nVerbose: " . $verbose);
+                error_log("Erro cURL ao enviar álbum: " . $error . " (código: " . $errno . ")");
                 return ['success' => false, 'message' => 'Erro na conexão com o Telegram: ' . $error . ' (código: ' . $errno . ')'];
             }
             
@@ -230,7 +271,7 @@ class TelegramService {
             }
             
             return [
-                'success' => true, 
+                'success' => true,
                 'message' => 'Álbum com ' . count($imagePaths) . ' imagens enviado com sucesso para o Telegram',
                 'sent_count' => count($imagePaths)
             ];
@@ -248,7 +289,8 @@ class TelegramService {
      * @param array $jogos Array com dados dos jogos
      * @return array Resultado da operação
      */
-    public function generateAndSendBanners($userId, $bannerType, $jogos) {
+    public function generateAndSendBanners($userId, $bannerType, $jogos)
+    {
         try {
             if (empty($jogos)) {
                 return ['success' => false, 'message' => 'Nenhum jogo disponível para gerar banners'];
@@ -268,7 +310,7 @@ class TelegramService {
                     break;
                 case 'football_4':
                     $bannerModel = 4;
-                    break;                    
+                    break;
                 default:
                     return ['success' => false, 'message' => 'Tipo de banner inválido'];
             }
@@ -370,7 +412,8 @@ class TelegramService {
      * @param string $contentType Tipo do conteúdo (filme ou série)
      * @return array Resultado da operação
      */
-    public function sendMovieSeriesBanner($userId, $bannerPath, $contentName, $contentType = 'filme') {
+    public function sendMovieSeriesBanner($userId, $bannerPath, $contentName, $contentType = 'filme')
+    {
         try {
             if (!file_exists($bannerPath)) {
                 return ['success' => false, 'message' => 'Arquivo do banner não encontrado: ' . $bannerPath];
