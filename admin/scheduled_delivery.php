@@ -62,6 +62,7 @@ try {
     
     require_once __DIR__ . '/classes/TelegramSettings.php';
     require_once __DIR__ . '/classes/TelegramService.php';
+    require_once __DIR__ . '/classes/User.php';
     require_once __DIR__ . '/includes/banner_functions.php';
     
     logMessage("Dependências carregadas com sucesso");
@@ -75,6 +76,7 @@ try {
     // Inicializar classes
     $telegramSettings = new TelegramSettings();
     $telegramService = new TelegramService();
+    $userClass = new User();
     
     // Buscar usuários com envio agendado para este horário
     $usersWithScheduledDelivery = $telegramSettings->getUsersWithScheduledDelivery($currentTime);
@@ -133,13 +135,47 @@ try {
         logMessage("Processando usuário ID {$userId} - Tema {$theme} - " . ($index + 1) . "/{$totalUsers}");
         
         try {
+            // 🔒 VERIFICAR STATUS E EXPIRAÇÃO DO USUÁRIO
+            $userData = $userClass->getUserById($userId);
+            
+            if (!$userData) {
+                logMessage("❌ Usuário ID {$userId} não encontrado no banco de dados", 'WARNING');
+                $failedUsers++;
+                $processedUsers++;
+                continue;
+            }
+            
+            // Verificar se o usuário está ativo ou em trial
+            if (!in_array($userData['status'], ['active', 'trial'])) {
+                logMessage("❌ Usuário ID {$userId} está inativo (status: {$userData['status']})", 'WARNING');
+                $failedUsers++;
+                $processedUsers++;
+                continue;
+            }
+            
+            // Verificar se a conta não está expirada
+            if ($userData['expires_at']) {
+                $expiryDate = new DateTime($userData['expires_at']);
+                $today = new DateTime();
+                
+                if ($expiryDate < $today) {
+                    logMessage("❌ Usuário ID {$userId} ({$userData['username']}) está com conta expirada (expirou em: {$userData['expires_at']})", 'WARNING');
+                    $failedUsers++;
+                    $processedUsers++;
+                    continue;
+                }
+            }
+            
+            logMessage("✅ Usuário ID {$userId} ({$userData['username']}) validado - Status: {$userData['status']}, Expira: " . ($userData['expires_at'] ?: 'Nunca'));
+            
+            // Prosseguir com o envio dos banners
             $result = $telegramService->generateAndSendBanners($userId, $bannerType, $jogos);
             
             if ($result['success']) {
-                logMessage("✅ Banners enviados com sucesso para usuário ID {$userId}");
+                logMessage("✅ Banners enviados com sucesso para usuário ID {$userId} ({$userData['username']})");
                 $successUsers++;
             } else {
-                logMessage("❌ Erro ao enviar banners para usuário ID {$userId}: " . $result['message'], 'ERROR');
+                logMessage("❌ Erro ao enviar banners para usuário ID {$userId} ({$userData['username']}): " . $result['message'], 'ERROR');
                 $failedUsers++;
             }
         } catch (Exception $e) {
